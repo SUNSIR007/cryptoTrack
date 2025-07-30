@@ -1,0 +1,40 @@
+{
+  "name": "cryptotrack",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Real-time cryptocurrency price tracker for BTC, ETH, SOL and V2EX meme coin",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "14.0.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "lucide-react": "^0.294.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SUNSIR007/cryptoTrack.git"
+  },
+  "keywords": ["cryptocurrency", "bitcoin", "ethereum", "solana", "price-tracker"],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SUNSIR007/cryptoTrack/issues"
+  },
+  "homepage": "https://github.com/SUNSIR007/cryptoTrack#readme"
+}
