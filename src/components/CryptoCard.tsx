@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { CryptoCardProps, PricePoint } from '../types/crypto';
 import { formatPrice, formatPercentage, formatMarketCap, formatSupply, fetchPriceHistory } from '../lib/api';
+import { useDebounce, useMemoizedCalculation } from '../hooks/usePerformance';
 import PriceChart from './PriceChart';
 import ChartControls from './ChartControls';
-import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, X } from 'lucide-react';
+import { isDefaultCoin } from '../lib/userCoins';
 
-export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProps) {
+const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemove, showRemoveButton = true }: CryptoCardProps) {
   const [chartPeriod, setChartPeriod] = useState('7');
   const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -46,9 +48,14 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
     );
   }
 
+  // 防抖的图表周期变更
+  const debouncedPeriodChange = useDebounce((period: string) => {
+    setChartPeriod(period);
+  }, 300);
+
   // 处理周期变化
   const handlePeriodChange = (period: string) => {
-    setChartPeriod(period);
+    debouncedPeriodChange(period);
   };
 
   if (isLoading) {
@@ -68,20 +75,35 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
     );
   }
 
-  const isPositive = crypto.price_change_percentage_24h >= 0;
-  const changeColor = isPositive
-    ? 'text-green-600 dark:text-green-400'
-    : 'text-red-600 dark:text-red-400';
+  // 使用记忆化计算优化性能
+  const { isPositive, changeColor, formattedPrice, formattedMarketCap } = useMemoizedCalculation(() => {
+    const isPositive = crypto.price_change_percentage_24h >= 0;
+    return {
+      isPositive,
+      changeColor: isPositive
+        ? 'text-green-600 dark:text-green-400'
+        : 'text-red-600 dark:text-red-400',
+      formattedPrice: formatPrice(crypto.current_price),
+      formattedMarketCap: formatMarketCap(crypto.market_cap)
+    };
+  }, [crypto.price_change_percentage_24h, crypto.current_price, crypto.market_cap]);
 
   // 获取币种图标URL
-  const getIconUrl = (id: string) => {
+  const getIconUrl = () => {
+    // 优先使用API返回的图标
+    if (crypto.image) {
+      return crypto.image;
+    }
+
+    // 备用图标映射
     const iconMap: { [key: string]: string } = {
       bitcoin: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
       ethereum: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
       solana: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
-      binancecoin: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png' // BNB官方图标
+      binancecoin: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png'
     };
-    return iconMap[id] || '';
+
+    return iconMap[crypto.id] || `https://via.placeholder.com/40x40/6366f1/ffffff?text=${crypto.symbol.charAt(0)}`;
   };
 
   return (
@@ -105,12 +127,24 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
             </p>
           </div>
 
-          {/* 币种图标 */}
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <div className="flex items-center space-x-2">
+            {/* 删除按钮 - 只对非默认币种显示 */}
+            {showRemoveButton && onRemove && !isDefaultCoin(crypto.id) && (
+              <button
+                onClick={() => onRemove(crypto.id)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors group"
+                title="移除此币种"
+              >
+                <X className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
+              </button>
+            )}
+
+            {/* 币种图标 */}
+            <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
             <img
-              src={getIconUrl(crypto.id)}
+              src={getIconUrl()}
               alt={crypto.name}
-              className="w-10 h-10 object-cover"
+              className="w-10 h-10 object-cover rounded-full"
               onError={(e) => {
                 // 如果图片加载失败，显示首字母
                 const target = e.target as HTMLImageElement;
@@ -121,6 +155,7 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
                 }
               }}
             />
+            </div>
           </div>
         </div>
 
@@ -216,4 +251,6 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
       </div>
     </div>
   );
-}
+});
+
+export default CryptoCard;
