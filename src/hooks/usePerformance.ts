@@ -12,12 +12,13 @@ export function useDebounce<T extends (...args: any[]) => any>(
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      
+
       timeoutRef.current = setTimeout(() => {
         callback(...args);
       }, delay);
     }) as T,
-    [callback, delay]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [delay]
   );
 }
 
@@ -36,7 +37,8 @@ export function useThrottle<T extends (...args: any[]) => any>(
         callback(...args);
       }
     }) as T,
-    [callback, delay]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [delay]
   );
 }
 
@@ -45,6 +47,7 @@ export function useMemoizedCalculation<T>(
   calculation: () => T,
   dependencies: any[]
 ): T {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(calculation, dependencies);
 }
 

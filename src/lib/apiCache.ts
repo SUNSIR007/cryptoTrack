@@ -65,18 +65,29 @@ class APICache {
   // 清理过期缓存
   cleanup(): void {
     const now = Date.now();
-    for (const [key, item] of this.cache.entries()) {
+    const keysToDelete: string[] = [];
+
+    this.cache.forEach((item, key) => {
       if (now > item.expiry) {
-        this.cache.delete(key);
+        keysToDelete.push(key);
       }
-    }
+    });
+
+    keysToDelete.forEach(key => {
+      this.cache.delete(key);
+    });
   }
 
   // 获取缓存统计
   getStats() {
+    const keys: string[] = [];
+    this.cache.forEach((_, key) => {
+      keys.push(key);
+    });
+
     return {
       size: this.cache.size,
-      keys: Array.from(this.cache.keys())
+      keys
     };
   }
 }

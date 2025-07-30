@@ -1,4 +1,4 @@
-import { CryptoCurrency, CoinGeckoResponse, CoinGeckoDetailedResponse, PricePoint } from '../types/crypto';
+import { CryptoCurrency, CoinGeckoResponse, CoinGeckoDetailedResponse, PricePoint, SearchResult } from '../types/crypto';
 import { apiCache, requestDeduplicator } from './apiCache';
 
 // 防止与浏览器扩展冲突
