@@ -1,10 +1,13 @@
-import { CryptoCurrency, CoinGeckoResponse, CoinGeckoDetailedResponse } from '../types/crypto';
+import { CryptoCurrency, CoinGeckoResponse, CoinGeckoDetailedResponse, PricePoint } from '../types/crypto';
 
-const API_KEY = 'CG-yueBVpChwNZbHLKqQxBbqpwR';
-const BASE_URL = 'https://api.coingecko.com/api/v3';
+// 防止与浏览器扩展冲突
+const CryptoTrackAPI = {
+  API_KEY: 'CG-yueBVpChwNZbHLKqQxBbqpwR',
+  BASE_URL: 'https://api.coingecko.com/api/v3'
+};
 
 // 币种ID映射
-const CRYPTO_IDS = {
+const SUPPORTED_CRYPTO_IDS = {
   bitcoin: 'bitcoin',
   ethereum: 'ethereum',
   solana: 'solana',
@@ -13,9 +16,9 @@ const CRYPTO_IDS = {
 
 export async function fetchCryptoPrices(): Promise<CryptoCurrency[]> {
   try {
-    const ids = Object.values(CRYPTO_IDS).join(',');
+    const ids = Object.values(SUPPORTED_CRYPTO_IDS).join(',');
     // 使用更详细的API端点获取完整数据
-    const url = `${BASE_URL}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h,7d&x_cg_demo_api_key=${API_KEY}`;
+    const url = `${CryptoTrackAPI.BASE_URL}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h,7d&x_cg_demo_api_key=${CryptoTrackAPI.API_KEY}`;
 
     const response = await fetch(url, {
       headers: {
@@ -53,6 +56,36 @@ export async function fetchCryptoPrices(): Promise<CryptoCurrency[]> {
   } catch (error) {
     console.error('Error fetching crypto prices:', error);
     throw error;
+  }
+}
+
+// 获取历史价格数据
+export async function fetchPriceHistory(coinId: string, days: number = 7): Promise<PricePoint[]> {
+  try {
+    const url = `${CryptoTrackAPI.BASE_URL}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=${days <= 1 ? 'hourly' : 'daily'}&x_cg_demo_api_key=${CryptoTrackAPI.API_KEY}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // 转换价格数据格式
+    const priceHistory: PricePoint[] = data.prices.map((price: [number, number]) => ({
+      timestamp: price[0],
+      price: price[1]
+    }));
+
+    return priceHistory;
+  } catch (error) {
+    console.error('Error fetching price history:', error);
+    return [];
   }
 }
 

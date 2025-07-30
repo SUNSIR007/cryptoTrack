@@ -6,7 +6,8 @@ import { fetchCryptoPrices } from '@/lib/api';
 import CryptoCard from '@/components/CryptoCard';
 import ThemeToggle from '@/components/ThemeToggle';
 import RefreshButton from '@/components/RefreshButton';
-import { TrendingUp, Clock } from 'lucide-react';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { TrendingUp } from 'lucide-react';
 
 export default function Home() {
   const [cryptos, setCryptos] = useState<CryptoCurrency[]>([]);
@@ -18,6 +19,10 @@ export default function Home() {
     try {
       setIsLoading(true);
       setError(null);
+
+      // 添加延迟以避免与浏览器扩展冲突
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const data = await fetchCryptoPrices();
       setCryptos(data);
       setLastUpdate(new Date());
@@ -79,18 +84,12 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 状态信息 */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               实时价格
             </h2>
-            {lastUpdate && (
-              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                <Clock className="w-4 h-4 mr-1" />
-                最后更新: {lastUpdate.toLocaleTimeString('zh-CN')}
-              </div>
-            )}
           </div>
-          
+
           <div className="text-sm text-gray-600 dark:text-gray-400">
             数据每5分钟自动更新，点击刷新按钮可手动更新
           </div>
@@ -119,11 +118,12 @@ export default function Home() {
           ) : (
             // 实际数据
             cryptos.map((crypto) => (
-              <CryptoCard 
-                key={crypto.id} 
-                crypto={crypto} 
-                isLoading={false}
-              />
+              <ErrorBoundary key={crypto.id}>
+                <CryptoCard
+                  crypto={crypto}
+                  isLoading={false}
+                />
+              </ErrorBoundary>
             ))
           )}
         </div>

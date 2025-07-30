@@ -41,7 +41,13 @@ export interface CoinGeckoResponse {
   };
 }
 
+export interface PricePoint {
+  timestamp: number;
+  price: number;
+}
+
 export interface CryptoCardProps {
   crypto: CryptoCurrency;
   isLoading?: boolean;
+  priceHistory?: PricePoint[];
 }

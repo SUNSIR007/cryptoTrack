@@ -1,9 +1,56 @@
 'use client';
 
-import { CryptoCardProps } from '../types/crypto';
-import { formatPrice, formatPercentage, formatMarketCap, formatSupply } from '../lib/api';
+import { useState, useEffect, useCallback } from 'react';
+import { CryptoCardProps, PricePoint } from '../types/crypto';
+import { formatPrice, formatPercentage, formatMarketCap, formatSupply, fetchPriceHistory } from '../lib/api';
+import PriceChart from './PriceChart';
+import ChartControls from './ChartControls';
+import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 
 export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProps) {
+  const [chartPeriod, setChartPeriod] = useState('7');
+  const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+
+  // 防止无效数据渲染
+  if (!crypto || (!isLoading && !crypto.id)) {
+    return (
+      <div className="bg-white dark:bg-black rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+        <div className="text-center text-gray-500 dark:text-gray-400">
+          <p>数据加载失败</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 获取价格历史数据
+  const loadPriceHistory = useCallback(async (period: string) => {
+    if (!crypto.id) return;
+
+    setChartLoading(true);
+    try {
+      const history = await fetchPriceHistory(crypto.id, parseInt(period));
+      setPriceHistory(history);
+    } catch (error) {
+      console.error('Failed to load price history:', error);
+      setPriceHistory([]);
+    } finally {
+      setChartLoading(false);
+    }
+  }, [crypto.id]);
+
+  // 当组件加载或周期改变时加载数据
+  useEffect(() => {
+    if (crypto.id) {
+      loadPriceHistory(chartPeriod);
+    }
+  }, [chartPeriod, crypto.id, loadPriceHistory]);
+
+  // 处理周期变化
+  const handlePeriodChange = (period: string) => {
+    setChartPeriod(period);
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-black rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 animate-pulse">
@@ -38,7 +85,7 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
   };
 
   return (
-    <div className="bg-white dark:bg-black rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 hover:scale-105">
+    <div className="bg-white dark:bg-black rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 hover:scale-102">
       <div className="space-y-4">
         {/* 币种名称和符号 */}
         <div className="flex items-center justify-between">
@@ -89,19 +136,57 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
           </div>
         </div>
 
+        {/* 价格图表 */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">价格走势</h4>
+            <ChartControls
+              selectedPeriod={chartPeriod}
+              onPeriodChange={handlePeriodChange}
+            />
+          </div>
+
+          {chartLoading ? (
+            <div className="h-32 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <PriceChart
+              data={priceHistory}
+              symbol={crypto.symbol}
+              isPositive={crypto.price_change_percentage_24h >= 0}
+              period={chartPeriod}
+            />
+          )}
+        </div>
+
         {/* 价格变化 */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col">
             <span className="text-xs text-gray-600 dark:text-gray-400">24h变化</span>
-            <span className={`text-sm font-semibold ${changeColor}`}>
-              {formatPercentage(crypto.price_change_percentage_24h)}
-            </span>
+            <div className="flex items-center space-x-2">
+              {crypto.price_change_percentage_24h >= 0 ? (
+                <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400 font-bold" />
+              ) : (
+                <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400 font-bold" />
+              )}
+              <span className={`text-base font-bold ${changeColor}`}>
+                {formatPercentage(crypto.price_change_percentage_24h)}
+              </span>
+            </div>
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-gray-600 dark:text-gray-400">7d变化</span>
-            <span className={`text-sm font-semibold ${crypto.price_change_percentage_7d >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              {formatPercentage(crypto.price_change_percentage_7d)}
-            </span>
+            <div className="flex items-center space-x-2">
+              {crypto.price_change_percentage_7d >= 0 ? (
+                <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400 font-bold" />
+              ) : (
+                <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400 font-bold" />
+              )}
+              <span className={`text-base font-bold ${crypto.price_change_percentage_7d >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {formatPercentage(crypto.price_change_percentage_7d)}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -127,10 +212,7 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
           </div>
         </div>
 
-        {/* 最后更新时间 */}
-        <div className="text-xs text-gray-500 dark:text-gray-500 text-center pt-2 border-t border-gray-200 dark:border-gray-700">
-          最后更新: {new Date(crypto.last_updated).toLocaleTimeString('zh-CN')}
-        </div>
+
       </div>
     </div>
   );
