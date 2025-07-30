@@ -10,13 +10,14 @@ export const metadata: Metadata = {
   description: '实时监测BTC、ETH、SOL和BNB等加密货币价格',
   keywords: ['cryptocurrency', 'bitcoin', 'ethereum', 'solana', 'price tracker'],
   authors: [{ name: 'CryptoTrack Team' }],
-  viewport: 'width=device-width, initial-scale=1',
   icons: {
     icon: '/favicon.png',
     apple: '/icon-192.png',
   },
   manifest: '/manifest.json',
 };
+
+export const viewport = 'width=device-width, initial-scale=1';
 
 export default function RootLayout({
   children,

@@ -2,7 +2,7 @@
   "name": "cryptotrack",
   "version": "0.1.0",
   "private": true,
-  "description": "Real-time cryptocurrency price tracker for BTC, ETH, SOL and V2EX meme coin",
+  "description": "Real-time cryptocurrency price tracker for BTC, ETH, SOL and BNB",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

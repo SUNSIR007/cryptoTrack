@@ -1,24 +1,7 @@
 {
-  "version": 2,
   "name": "cryptotrack",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/"
-    }
-  ],
+  "framework": "nextjs",
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "app/page.tsx": {
-      "maxDuration": 10
-    }
   }
 }
