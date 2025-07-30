@@ -128,6 +128,20 @@ export default function Home() {
           )}
         </div>
 
+        {/* 投资理念文字 */}
+        {!isLoading && cryptos.length > 0 && (
+          <div className="mt-12 text-center">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-8 rounded-2xl border border-blue-200 dark:border-blue-800">
+              <p className="text-xl font-serif italic text-gray-700 dark:text-gray-300 tracking-wide leading-relaxed">
+                "Our favorite holding period is forever."
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                — Warren Buffett
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* 空状态 */}
         {!isLoading && cryptos.length === 0 && !error && (
           <div className="text-center py-12">

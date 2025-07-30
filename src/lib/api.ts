@@ -1,4 +1,4 @@
-import { CryptoCurrency, CoinGeckoResponse } from '../types/crypto';
+import { CryptoCurrency, CoinGeckoResponse, CoinGeckoDetailedResponse } from '../types/crypto';
 
 const API_KEY = 'CG-yueBVpChwNZbHLKqQxBbqpwR';
 const BASE_URL = 'https://api.coingecko.com/api/v3';
@@ -14,7 +14,8 @@ const CRYPTO_IDS = {
 export async function fetchCryptoPrices(): Promise<CryptoCurrency[]> {
   try {
     const ids = Object.values(CRYPTO_IDS).join(',');
-    const url = `${BASE_URL}/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&x_cg_demo_api_key=${API_KEY}`;
+    // 使用更详细的API端点获取完整数据
+    const url = `${BASE_URL}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h,7d&x_cg_demo_api_key=${API_KEY}`;
 
     const response = await fetch(url, {
       headers: {
@@ -26,31 +27,25 @@ export async function fetchCryptoPrices(): Promise<CryptoCurrency[]> {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data: CoinGeckoResponse = await response.json();
+    const data = await response.json();
 
     // 转换数据格式
-    const cryptos: CryptoCurrency[] = Object.entries(data).map(([id, priceData]) => {
-      const symbolMap: { [key: string]: string } = {
-        bitcoin: 'BTC',
-        ethereum: 'ETH',
-        solana: 'SOL',
-        binancecoin: 'BNB'
-      };
-
-      const nameMap: { [key: string]: string } = {
-        bitcoin: 'Bitcoin',
-        ethereum: 'Ethereum',
-        solana: 'Solana',
-        binancecoin: 'BNB'
-      };
-
+    const cryptos: CryptoCurrency[] = data.map((coin: any) => {
       return {
-        id,
-        symbol: symbolMap[id] || id.toUpperCase(),
-        name: nameMap[id] || id,
-        current_price: priceData.usd,
-        price_change_percentage_24h: priceData.usd_24h_change || 0,
-        last_updated: new Date().toISOString(),
+        id: coin.id,
+        symbol: coin.symbol.toUpperCase(),
+        name: coin.name,
+        current_price: coin.current_price || 0,
+        price_change_percentage_24h: coin.price_change_percentage_24h || 0,
+        price_change_percentage_7d: coin.price_change_percentage_7d_in_currency || 0,
+        market_cap: coin.market_cap || 0,
+        market_cap_rank: coin.market_cap_rank || 0,
+        total_volume: coin.total_volume || 0,
+        high_24h: coin.high_24h || 0,
+        low_24h: coin.low_24h || 0,
+        circulating_supply: coin.circulating_supply || 0,
+        total_supply: coin.total_supply || 0,
+        last_updated: coin.last_updated || new Date().toISOString(),
       };
     });
 
@@ -84,4 +79,32 @@ export function formatPrice(price: number): string {
 export function formatPercentage(percentage: number): string {
   const sign = percentage >= 0 ? '+' : '';
   return `${sign}${percentage.toFixed(2)}%`;
+}
+
+// 格式化市值和交易量
+export function formatMarketCap(value: number): string {
+  if (value >= 1e12) {
+    return `$${(value / 1e12).toFixed(2)}T`;
+  } else if (value >= 1e9) {
+    return `$${(value / 1e9).toFixed(2)}B`;
+  } else if (value >= 1e6) {
+    return `$${(value / 1e6).toFixed(2)}M`;
+  } else if (value >= 1e3) {
+    return `$${(value / 1e3).toFixed(2)}K`;
+  } else {
+    return `$${value.toFixed(2)}`;
+  }
+}
+
+// 格式化供应量
+export function formatSupply(value: number): string {
+  if (value >= 1e9) {
+    return `${(value / 1e9).toFixed(2)}B`;
+  } else if (value >= 1e6) {
+    return `${(value / 1e6).toFixed(2)}M`;
+  } else if (value >= 1e3) {
+    return `${(value / 1e3).toFixed(2)}K`;
+  } else {
+    return value.toFixed(0);
+  }
 }
