@@ -10,8 +10,19 @@ export const metadata: Metadata = {
   description: '实时监测BTC、ETH、SOL和V2EX等加密货币价格',
   keywords: ['cryptocurrency', 'bitcoin', 'ethereum', 'solana', 'price tracker'],
   authors: [{ name: 'CryptoTrack Team' }],
-  viewport: 'width=device-width, initial-scale=1',
+  icons: {
+    icon: [
+      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+    ],
+    apple: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }
+    ]
+  }
 };
+
+export const viewport = 'width=device-width, initial-scale=1';
 
 export default function RootLayout({
   children,

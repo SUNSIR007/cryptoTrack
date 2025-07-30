@@ -12,20 +12,9 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
   const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
 
-  // 防止无效数据渲染
-  if (!crypto || (!isLoading && !crypto.id)) {
-    return (
-      <div className="bg-white dark:bg-black rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-        <div className="text-center text-gray-500 dark:text-gray-400">
-          <p>数据加载失败</p>
-        </div>
-      </div>
-    );
-  }
-
   // 获取价格历史数据
   const loadPriceHistory = useCallback(async (period: string) => {
-    if (!crypto.id) return;
+    if (!crypto?.id) return;
 
     setChartLoading(true);
     try {
@@ -37,14 +26,25 @@ export default function CryptoCard({ crypto, isLoading = false }: CryptoCardProp
     } finally {
       setChartLoading(false);
     }
-  }, [crypto.id]);
+  }, [crypto?.id]);
 
   // 当组件加载或周期改变时加载数据
   useEffect(() => {
-    if (crypto.id) {
+    if (crypto?.id) {
       loadPriceHistory(chartPeriod);
     }
-  }, [chartPeriod, crypto.id, loadPriceHistory]);
+  }, [chartPeriod, crypto?.id, loadPriceHistory]);
+
+  // 防止无效数据渲染
+  if (!crypto || (!isLoading && !crypto.id)) {
+    return (
+      <div className="bg-white dark:bg-black rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+        <div className="text-center text-gray-500 dark:text-gray-400">
+          <p>数据加载失败</p>
+        </div>
+      </div>
+    );
+  }
 
   // 处理周期变化
   const handlePeriodChange = (period: string) => {
