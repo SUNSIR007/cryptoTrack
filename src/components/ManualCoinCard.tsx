@@ -147,7 +147,7 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
     if (hasRealData && !tokenIcon) {
       fetchTokenIcon();
     }
-  }, [coinName, crypto.symbol, crypto.image, hasRealData, tokenIcon]);
+  }, [coinName, crypto.symbol, crypto.image, crypto.name, hasRealData, tokenIcon]);
 
   // 自动刷新逻辑 - 只有meme币才自动刷新
   useEffect(() => {

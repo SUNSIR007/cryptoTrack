@@ -44,6 +44,12 @@ export interface CryptoCurrency {
       symbol?: string;
     };
     chainId?: string;
+    info?: {
+      imageUrl?: string;
+      websites?: string[];
+      socials?: any[];
+      [key: string]: any;
+    };
   };
 }
 
