@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Github } from 'lucide-react';
 import { CryptoCurrency } from '@/types/crypto';
 import { fetchCryptoPrices } from '@/lib/api';
 import { getUserCoins, addUserCoin, removeUserCoin } from '@/lib/userCoins';
@@ -111,6 +111,15 @@ export default function Home() {
                 <Plus className="w-5 h-5 sm:w-5 sm:h-5" />
               </button>
               <RefreshButton onRefresh={handleRefresh} isLoading={isLoading} />
+              <a
+                href="https://github.com/SUNSIR007/cryptoTrack"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-3 rounded-full bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white transition-colors duration-200 shadow-lg border border-gray-500 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                title="查看 GitHub 仓库"
+              >
+                <Github className="w-5 h-5" />
+              </a>
               <ThemeToggle />
             </div>
           </div>

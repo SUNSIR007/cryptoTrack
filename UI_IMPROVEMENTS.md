@@ -1,6 +1,38 @@
 # 🎨 UI 改进说明
 
-## 删除按钮交互优化
+## 1. GitHub 仓库链接按钮
+
+### 新增功能
+在应用头部右上角添加了 GitHub 仓库链接按钮，方便用户访问项目源代码。
+
+### 技术实现
+```tsx
+<a
+  href="https://github.com/SUNSIR007/cryptoTrack"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="p-3 sm:p-3 md:p-3 rounded-full bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white transition-colors duration-200 shadow-lg border border-gray-500 min-w-[44px] min-h-[44px] flex items-center justify-center"
+  title="查看 GitHub 仓库"
+>
+  <Github className="w-5 h-5 sm:w-5 sm:h-5" />
+</a>
+```
+
+### 设计特点
+- ✅ **一致的样式**: 与其他按钮保持相同的尺寸和样式规范
+- ✅ **灰色主题**: 使用中性的灰色配色，不会干扰主要功能按钮
+- ✅ **悬浮效果**: 包含 hover 和 active 状态的颜色变化
+- ✅ **安全链接**: 使用 `target="_blank"` 和 `rel="noopener noreferrer"`
+- ✅ **无障碍支持**: 包含 `title` 属性提供工具提示
+
+### 按钮顺序
+从左到右的按钮顺序：
+1. 🟡 添加币种 (Plus)
+2. 🔵 刷新数据 (RefreshButton)
+3. ⚫ GitHub 仓库 (Github)
+4. 🌙 主题切换 (ThemeToggle)
+
+## 2. 删除按钮交互优化
 
 ### 问题描述
 之前的删除按钮实现中，用户需要精确地将鼠标悬浮在叉号图标上才能看到叉号，这导致用户体验不佳。
