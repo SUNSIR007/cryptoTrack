@@ -214,6 +214,27 @@ export default function Home() {
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
             <p>数据来源: CoinGecko API | 每5分钟自动更新</p>
             <p className="mt-1">© 2024 CryptoTrack. Built with Next.js & Tailwind CSS</p>
+            <div className="mt-3 space-x-4">
+              <a
+                href="/security"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                安全声明
+              </a>
+              <span className="text-gray-400">|</span>
+              <a
+                href="https://github.com/SUNSIR007/cryptoTrack"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                开源代码
+              </a>
+              <span className="text-gray-400">|</span>
+              <span className="text-green-600 dark:text-green-400">
+                🔒 安全合规
+              </span>
+            </div>
           </div>
         </div>
       </footer>
