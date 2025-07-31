@@ -1,7 +1,4 @@
 {
   "name": "cryptotrack",
-  "framework": "nextjs",
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "framework": "nextjs"
 }

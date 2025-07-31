@@ -152,6 +152,7 @@ cryptoTrack/
 
 - 📖 [API 配置指南](./API_SETUP_GUIDE.md)
 - 🚀 [部署指南](./DEPLOYMENT.md)
+- 🔧 [Vercel 故障排除](./VERCEL_TROUBLESHOOTING.md)
 - 🤝 [贡献指南](./CONTRIBUTING.md)
 - 🐛 [报告问题](https://github.com/SUNSIR007/cryptoTrack/issues)
 

@@ -1,4 +1,4 @@
-name: Deploy to Vercel
+name: Build and Test
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -28,7 +28,8 @@ jobs:
         echo "检查环境变量配置..."
         if [ -z "$NEXT_PUBLIC_COINGECKO_API_KEY" ]; then
           echo "⚠️  警告: NEXT_PUBLIC_COINGECKO_API_KEY 未设置"
-          echo "请在 GitHub Secrets 或 Vercel 环境变量中配置 API 密钥"
+          echo "请在 Vercel 环境变量中配置 API 密钥"
+          echo "这不会影响构建，但部署后需要配置才能正常工作"
         else
           echo "✅ API 密钥已配置"
         fi
@@ -43,31 +44,7 @@ jobs:
     - name: Run linting
       run: npm run lint
 
-  deploy-preview:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Deploy to Vercel (Preview)
-      uses: amondnet/vercel-action@v25
-      with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        scope: ${{ secrets.VERCEL_ORG_ID }}
-
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Deploy to Vercel (Production)
-      uses: amondnet/vercel-action@v25
-      with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        vercel-args: '--prod'
-        scope: ${{ secrets.VERCEL_ORG_ID }}
+    - name: Run environment check
+      run: npm run check-env
+      env:
+        NEXT_PUBLIC_COINGECKO_API_KEY: ${{ secrets.NEXT_PUBLIC_COINGECKO_API_KEY }}

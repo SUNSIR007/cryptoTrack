@@ -33,20 +33,39 @@ git push -u origin main
 
 ### 2. 在Vercel中部署
 
-#### 方法一：通过Vercel网站部署
+#### 方法一：通过Vercel网站部署 (推荐)
 
-1. 访问 [vercel.com](https://vercel.com)
-2. 使用GitHub账户登录
-3. 点击 "New Project"
-4. 选择你的 `cryptoTrack` 仓库
-5. 配置项目设置：
-   - **Framework Preset**: Next.js
+**⚠️ 重要提示：在部署前必须先配置 API 密钥，否则应用无法正常工作！**
+
+1. **准备工作**
+   - 确保代码已推送到 GitHub 仓库
+   - 获取 CoinGecko API 密钥：[https://www.coingecko.com/en/api](https://www.coingecko.com/en/api)
+
+2. **连接项目**
+   - 访问 [vercel.com](https://vercel.com)
+   - 使用 GitHub 账户登录
+   - 点击 "New Project"
+   - 选择你的 `cryptoTrack` 仓库
+
+3. **配置项目设置**
+   - **Framework Preset**: Next.js (自动检测)
    - **Root Directory**: `./` (默认)
    - **Build Command**: `npm run build` (默认)
    - **Output Directory**: `.next` (默认)
    - **Install Command**: `npm install` (默认)
 
-6. 点击 "Deploy" 开始部署
+4. **🔑 配置环境变量 (关键步骤)**
+   - 在部署页面，点击 "Environment Variables" 展开
+   - 添加环境变量：
+     - **Name**: `NEXT_PUBLIC_COINGECKO_API_KEY`
+     - **Value**: `CG-你的实际API密钥`
+     - **Environment**: 选择 `Production`, `Preview`, `Development` (全选)
+   - 点击 "Add" 确认
+
+5. **开始部署**
+   - 确认所有配置正确
+   - 点击 "Deploy" 开始部署
+   - 等待构建完成（通常需要 1-3 分钟）
 
 #### 方法二：通过Vercel CLI部署
 

@@ -116,8 +116,19 @@ async function testApiConnection() {
   log('\n🌐 测试 API 连接...', 'blue');
   
   try {
-    // 动态导入 fetch（Node.js 18+）
-    const fetch = (await import('node-fetch')).default;
+    // 使用内置 fetch（Node.js 18+）或动态导入
+    let fetch;
+    if (typeof globalThis.fetch !== 'undefined') {
+      fetch = globalThis.fetch;
+    } else {
+      // 对于较老的 Node.js 版本，尝试使用 node-fetch
+      try {
+        fetch = (await import('node-fetch')).default;
+      } catch (e) {
+        console.log('⚠️  无法导入 fetch，跳过 API 连接测试', 'yellow');
+        return false;
+      }
+    }
     
     const response = await fetch(
       `https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&x_cg_demo_api_key=${apiKey}`
