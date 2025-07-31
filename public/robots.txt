@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# 禁止访问已删除的测试页面
+Disallow: /debug
+Disallow: /test
+Disallow: /test-*
+
+# 网站地图
+Sitemap: https://your-domain.com/sitemap.xml
+
+# 说明这是一个合法的加密货币价格追踪工具
+# This is a legitimate cryptocurrency price tracking tool
+# 仅用于教育和信息目的，不提供投资建议
+# For educational and informational purposes only, no investment advice provided
+#
+# 网站特性：
+# - 开源项目：https://github.com/SUNSIR007/cryptoTrack
+# - 仅显示公开的加密货币价格信息
+# - 不收集用户个人信息
+# - 不进行任何金融交易
+# - 数据来源：CoinGecko API, DexScreener API
