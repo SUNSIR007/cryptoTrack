@@ -213,6 +213,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
             <p>数据来源: CoinGecko API | 每5分钟自动更新</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+              ⚠️ 仅供教育和信息参考，不构成投资建议。投资有风险，请谨慎决策。
+            </p>
             <p className="mt-1">© 2024 CryptoTrack. Built with Next.js & Tailwind CSS</p>
             <div className="mt-3 space-x-4">
               <a

@@ -7,9 +7,31 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'CryptoTrack - 实时加密货币价格监测',
-  description: '实时监测BTC、ETH、SOL和V2EX等加密货币价格',
-  keywords: ['cryptocurrency', 'bitcoin', 'ethereum', 'solana', 'price tracker'],
+  description: '开源的加密货币价格追踪工具，仅供教育和信息参考。实时监测BTC、ETH、SOL等主流加密货币价格，不提供投资建议。',
+  keywords: ['cryptocurrency', 'bitcoin', 'ethereum', 'solana', 'price tracker', 'educational', 'open source'],
   authors: [{ name: 'CryptoTrack Team' }],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    title: 'CryptoTrack - 开源加密货币价格追踪工具',
+    description: '教育用途的开源项目，实时显示主流加密货币价格信息',
+    type: 'website',
+    locale: 'zh_CN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'CryptoTrack - 开源加密货币价格追踪工具',
+    description: '教育用途的开源项目，实时显示主流加密货币价格信息',
+  },
   icons: {
     icon: [
       { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
@@ -19,6 +41,13 @@ export const metadata: Metadata = {
     apple: [
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }
     ]
+  },
+  other: {
+    'application-name': 'CryptoTrack',
+    'apple-mobile-web-app-title': 'CryptoTrack',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+    'format-detection': 'telephone=no',
   }
 };
 
