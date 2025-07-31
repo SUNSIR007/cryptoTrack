@@ -31,19 +31,35 @@
 
 ## 快速开始
 
-### 安装依赖
+### 1. 安装依赖
 
 ```bash
 npm install
 ```
 
-### 启动开发服务器
+### 2. 配置 API 密钥
+
+**重要**：项目需要 CoinGecko API 密钥才能正常运行。
+
+1. 获取免费 API 密钥：访问 [CoinGecko API](https://www.coingecko.com/en/api) 注册并获取密钥
+2. 创建环境变量文件：
+```bash
+cp .env.example .env.local
+```
+3. 编辑 `.env.local` 文件，填入你的 API 密钥：
+```env
+NEXT_PUBLIC_COINGECKO_API_KEY=CG-你的实际API密钥
+```
+
+### 3. 启动开发服务器
 
 ```bash
 npm run dev
 ```
 
 访问 [http://localhost:3000](http://localhost:3000) 查看应用。
+
+> 📖 **详细配置指南**：查看 [API_SETUP_GUIDE.md](./API_SETUP_GUIDE.md) 获取完整的 API 配置说明。
 
 ### 构建生产版本
 
@@ -54,13 +70,37 @@ npm start
 
 ## 部署到Vercel
 
-1. 将代码推送到GitHub仓库
-2. 在Vercel中导入项目
-3. 自动部署完成
+### 快速部署
 
-## API配置
+1. Fork 这个仓库到你的 GitHub 账户
+2. 在 [Vercel](https://vercel.com) 中导入项目
+3. **重要**：在部署前配置环境变量
+   - 进入项目设置 → Environment Variables
+   - 添加：`NEXT_PUBLIC_COINGECKO_API_KEY` = `你的CoinGecko API密钥`
+4. 点击部署
 
-项目使用CoinGecko API获取价格数据，API密钥已配置在代码中。如需更换API密钥，请修改 `src/lib/api.ts` 文件中的 `API_KEY` 常量。
+### 通过 CLI 部署
+
+```bash
+# 安装 Vercel CLI
+npm i -g vercel
+
+# 配置环境变量
+vercel env add NEXT_PUBLIC_COINGECKO_API_KEY
+
+# 部署
+vercel --prod
+```
+
+> 📖 **详细部署指南**：查看 [DEPLOYMENT.md](./DEPLOYMENT.md) 获取完整的部署说明。
+
+## API 配置
+
+项目使用 CoinGecko API 获取价格数据。**每个部署者都需要配置自己的 API 密钥**：
+
+- 🆓 **免费获取**：[CoinGecko API](https://www.coingecko.com/en/api)
+- 📝 **配置方法**：查看 [API_SETUP_GUIDE.md](./API_SETUP_GUIDE.md)
+- 🔧 **环境变量**：`NEXT_PUBLIC_COINGECKO_API_KEY`
 
 ## 项目结构
 
@@ -86,7 +126,40 @@ cryptoTrack/
 └── next.config.js
 ```
 
+## 技术栈
+
+- **框架**: Next.js 14 (App Router)
+- **语言**: TypeScript
+- **样式**: Tailwind CSS
+- **图标**: Lucide React
+- **图表**: Recharts
+- **API**: CoinGecko API
+
+## 🤝 贡献
+
+我们欢迎所有形式的贡献！请查看 [贡献指南](./CONTRIBUTING.md) 了解如何参与项目开发。
+
+### 快速贡献步骤
+
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 配置你的 API 密钥（查看 [API_SETUP_GUIDE.md](./API_SETUP_GUIDE.md)）
+4. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+5. 推送到分支 (`git push origin feature/AmazingFeature`)
+6. 创建 Pull Request
+
+## 📞 支持
+
+- 📖 [API 配置指南](./API_SETUP_GUIDE.md)
+- 🚀 [部署指南](./DEPLOYMENT.md)
+- 🤝 [贡献指南](./CONTRIBUTING.md)
+- 🐛 [报告问题](https://github.com/SUNSIR007/cryptoTrack/issues)
+
 ## 开发者
 
 由Augment和Claude协作开发完成。
+
+## 许可证
+
+ISC
 

@@ -3,9 +3,20 @@ import { apiCache, requestDeduplicator } from './apiCache';
 
 // 防止与浏览器扩展冲突
 const CryptoTrackAPI = {
-  API_KEY: 'CG-yueBVpChwNZbHLKqQxBbqpwR',
+  API_KEY: process.env.NEXT_PUBLIC_COINGECKO_API_KEY || process.env.COINGECKO_API_KEY || '',
   BASE_URL: 'https://api.coingecko.com/api/v3'
 };
+
+// 检查API密钥是否配置
+function checkApiKey(): boolean {
+  if (!CryptoTrackAPI.API_KEY) {
+    console.error('❌ CoinGecko API密钥未配置！');
+    console.error('请在环境变量中设置 NEXT_PUBLIC_COINGECKO_API_KEY 或 COINGECKO_API_KEY');
+    console.error('获取免费API密钥: https://www.coingecko.com/en/api');
+    return false;
+  }
+  return true;
+}
 
 // DexScreener API for Solana/Pump.fun tokens
 const DexScreenerAPI = {
@@ -35,6 +46,11 @@ const SUPPORTED_CRYPTO_IDS = {
 };
 
 export async function fetchCryptoPrices(coinIds?: string[], currency: string = 'usd'): Promise<CryptoCurrency[]> {
+  // 检查API密钥
+  if (!checkApiKey()) {
+    throw new Error('CoinGecko API密钥未配置，请设置环境变量 NEXT_PUBLIC_COINGECKO_API_KEY');
+  }
+
   if (!coinIds || coinIds.length === 0) {
     coinIds = Object.values(SUPPORTED_CRYPTO_IDS);
   }
@@ -156,6 +172,12 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
 
 // 获取历史价格数据
 export async function fetchPriceHistory(coinId: string, days: number = 7): Promise<PricePoint[]> {
+  // 检查API密钥
+  if (!checkApiKey()) {
+    console.error('无法获取历史价格数据：API密钥未配置');
+    return [];
+  }
+
   try {
     const url = `${CryptoTrackAPI.BASE_URL}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=${days <= 1 ? 'hourly' : 'daily'}&x_cg_demo_api_key=${CryptoTrackAPI.API_KEY}`;
 

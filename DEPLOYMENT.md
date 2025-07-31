@@ -71,21 +71,48 @@ vercel
 vercel --prod
 ```
 
-### 3. 环境变量配置
+### 3. 环境变量配置 ⚠️ **必需步骤**
 
-如果需要配置环境变量（如API密钥），可以在Vercel项目设置中添加：
+**重要**：项目需要 CoinGecko API 密钥才能正常运行。
 
-1. 进入Vercel项目仪表板
+#### 获取 API 密钥
+
+1. 访问 [CoinGecko API](https://www.coingecko.com/en/api)
+2. 注册账户并获取免费 API 密钥
+3. 复制你的 API 密钥（格式：`CG-xxxxxxxxxx`）
+
+#### 在 Vercel 中配置环境变量
+
+1. 进入 Vercel 项目仪表板
 2. 点击 "Settings" 标签
 3. 选择 "Environment Variables"
-4. 添加所需的环境变量
+4. 添加以下环境变量：
 
-当前项目的API密钥已硬编码在代码中，生产环境建议使用环境变量：
+| 变量名 | 值 | 环境 |
+|--------|----|----- |
+| `NEXT_PUBLIC_COINGECKO_API_KEY` | `CG-你的实际API密钥` | Production, Preview, Development |
+
+#### 通过 CLI 配置
 
 ```bash
-# 在Vercel中添加环境变量
-COINGECKO_API_KEY=CG-yueBVpChwNZbHLKqQxBbqpwR
+# 添加环境变量
+vercel env add NEXT_PUBLIC_COINGECKO_API_KEY
+
+# 按提示输入：
+# - 变量值：你的 CoinGecko API 密钥
+# - 环境：选择 Production, Preview, Development
 ```
+
+#### 验证配置
+
+部署完成后，如果看到以下错误，说明环境变量未正确配置：
+- "CoinGecko API密钥未配置"
+- "HTTP error! status: 401"
+
+解决方法：
+1. 检查环境变量名称是否正确
+2. 确认 API 密钥有效
+3. 重新部署项目
 
 ### 4. 自定义域名（可选）
 

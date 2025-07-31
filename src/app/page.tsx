@@ -15,6 +15,7 @@ import RefreshButton from '@/components/RefreshButton';
 import CoinSearch from '@/components/CoinSearch';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ExtensionGuard from '@/components/ExtensionGuard';
+import ApiStatus from '@/components/ApiStatus';
 
 
 export default function Home() {
@@ -118,7 +119,8 @@ export default function Home() {
 
       {/* 主要内容 */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
+        {/* API 状态检查 */}
+        <ApiStatus className="mb-6" />
 
         {/* 错误提示 */}
         {error && !isLoading && (
