@@ -233,8 +233,31 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
             </p>
           </div>
 
-          {/* 币种头像 - 放在最右边 */}
-          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+          {/* 币种头像 - 放在最右边，点击跳转到DexScreener */}
+          <div
+            className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all duration-200"
+            onClick={() => {
+              // 构建DexScreener链接
+              let dexScreenerUrl = '';
+
+              if (crypto.dexscreener_data?.url) {
+                // 如果有直接的DexScreener URL，使用它
+                dexScreenerUrl = crypto.dexscreener_data.url;
+              } else if (crypto.dexscreener_data?.pairAddress) {
+                // 如果有交易对地址，构建链接
+                dexScreenerUrl = `https://dexscreener.com/solana/${crypto.dexscreener_data.pairAddress}`;
+              } else {
+                // 否则搜索币种名称
+                const searchQuery = encodeURIComponent(coinName);
+                dexScreenerUrl = `https://dexscreener.com/search?q=${searchQuery}`;
+              }
+
+              if (dexScreenerUrl) {
+                window.open(dexScreenerUrl, '_blank', 'noopener,noreferrer');
+              }
+            }}
+            title={`在DexScreener上查看 ${coinName}`}
+          >
             {tokenIcon ? (
               <img
                 src={tokenIcon}
@@ -259,34 +282,22 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
           </div>
           <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
             <span>高: {(() => {
-              // 优先使用DexScreener的24h最高价
-              if (crypto.dexscreener_data?.priceChange?.h24 !== undefined && crypto.current_price) {
-                const changePercent = crypto.dexscreener_data.priceChange.h24 / 100;
-                const estimatedHigh = crypto.current_price * (1 + Math.abs(changePercent));
-                return `$${formatPrice(estimatedHigh)}`;
-              }
-              // 其次使用标准的24h最高价
+              // 优先使用标准的24h最高价
               if (hasRealData && crypto.high_24h) {
                 return `$${formatPrice(crypto.high_24h)}`;
               }
-              // 最后使用当前价格
+              // 如果没有24h最高价数据，使用当前价格作为参考
               if (hasRealData && crypto.current_price) {
                 return `$${formatPrice(crypto.current_price)}`;
               }
               return '--';
             })()}</span>
             <span>低: {(() => {
-              // 优先使用DexScreener的24h最低价
-              if (crypto.dexscreener_data?.priceChange?.h24 !== undefined && crypto.current_price) {
-                const changePercent = crypto.dexscreener_data.priceChange.h24 / 100;
-                const estimatedLow = crypto.current_price * (1 - Math.abs(changePercent));
-                return `$${formatPrice(estimatedLow)}`;
-              }
-              // 其次使用标准的24h最低价
+              // 优先使用标准的24h最低价
               if (hasRealData && crypto.low_24h) {
                 return `$${formatPrice(crypto.low_24h)}`;
               }
-              // 最后使用当前价格
+              // 如果没有24h最低价数据，使用当前价格作为参考
               if (hasRealData && crypto.current_price) {
                 return `$${formatPrice(crypto.current_price)}`;
               }
@@ -304,20 +315,15 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
                 ? 'V2EX是一个关于分享和探索的地方，汇聚了众多技术爱好者和创意工作者。这里有最新的技术讨论、创意分享和思维碰撞。'
                 : `${coinName}是一个新兴的数字资产项目，致力于为用户提供创新的区块链解决方案和优质的社区体验。`
               }
-              {isMemeToken && (
-                <span className="block mt-1 text-blue-600 dark:text-blue-400 text-xs">
-                  🔄 Meme币 - 自动刷新中
-                </span>
-              )}
             </p>
           </div>
         </div>
 
-        {/* 基础统计 - 简化版本 */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-500 dark:text-gray-400">24h变化</span>
-            <span className={`font-medium ${
+        {/* 基础统计 - 与传统币卡片字体大小一致 */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-600 dark:text-gray-400">24h变化</span>
+            <span className={`text-base font-bold ${
               hasRealData && crypto.price_change_percentage_24h >= 0
                 ? 'text-green-600 dark:text-green-400'
                 : hasRealData && crypto.price_change_percentage_24h < 0
@@ -337,9 +343,9 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
               })()}
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500 dark:text-gray-400">流动性</span>
-            <span className="font-medium text-gray-900 dark:text-white">
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-600 dark:text-gray-400">流动性</span>
+            <span className="text-base font-bold text-gray-900 dark:text-white">
               {(() => {
                 // 显示流动性而不是7d变化，因为DexScreener通常没有7d数据
                 if (crypto.dexscreener_data?.liquidity && crypto.dexscreener_data.liquidity > 0) {
@@ -421,8 +427,6 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
                     })()}
                   </span>
                 </div>
-
-
               </>
             )}
 

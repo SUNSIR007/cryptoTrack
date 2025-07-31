@@ -513,8 +513,8 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
       market_cap: parseFloat(pair.marketCap) || 0,
       market_cap_rank: 0,
       total_volume: parseFloat(pair.volume?.h24) || 0,
-      high_24h: parseFloat(pair.priceUsd) || 0, // 使用当前价格作为近似值
-      low_24h: parseFloat(pair.priceUsd) || 0,
+      high_24h: 0, // DexScreener API不提供24h最高价，设为0
+      low_24h: 0, // DexScreener API不提供24h最低价，设为0
       circulating_supply: 0,
       total_supply: 0,
       last_updated: new Date().toISOString(),

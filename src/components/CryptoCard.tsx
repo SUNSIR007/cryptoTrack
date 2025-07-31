@@ -138,8 +138,28 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
             </p>
           </div>
 
-          {/* 币种图标 */}
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          {/* 币种图标 - 点击跳转到DexScreener */}
+          <div
+            className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all duration-200"
+            onClick={() => {
+              // 构建CoinGecko链接
+              let coinGeckoUrl = '';
+
+              // 使用币种ID构建CoinGecko链接
+              if (crypto.id) {
+                coinGeckoUrl = `https://www.coingecko.com/en/coins/${crypto.id}`;
+              } else {
+                // 如果没有ID，使用币种名称的小写形式
+                const coinName = crypto.name.toLowerCase().replace(/\s+/g, '-');
+                coinGeckoUrl = `https://www.coingecko.com/en/coins/${coinName}`;
+              }
+
+              if (coinGeckoUrl) {
+                window.open(coinGeckoUrl, '_blank', 'noopener,noreferrer');
+              }
+            }}
+            title={`在CoinGecko上查看 ${crypto.name}`}
+          >
           <img
             src={getIconUrl()}
             alt={crypto.name}
