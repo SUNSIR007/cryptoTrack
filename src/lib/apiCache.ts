@@ -62,6 +62,19 @@ class APICache {
     this.cache.clear();
   }
 
+  // 清除特定前缀的缓存
+  clearByPrefix(prefix: string): void {
+    const keysToDelete: string[] = [];
+    this.cache.forEach((_, key) => {
+      if (key.startsWith(prefix)) {
+        keysToDelete.push(key);
+      }
+    });
+    keysToDelete.forEach(key => {
+      this.cache.delete(key);
+    });
+  }
+
   // 清理过期缓存
   cleanup(): void {
     const now = Date.now();

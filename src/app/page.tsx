@@ -7,14 +7,14 @@ import { fetchCryptoPrices } from '@/lib/api';
 import { getUserCoins, addUserCoin, removeUserCoin } from '@/lib/userCoins';
 import { currencyManager } from '@/lib/currency';
 import CryptoCard from '@/components/CryptoCard';
+import ManualCoinCard from '@/components/ManualCoinCard';
 import CryptoCardSkeleton from '@/components/CryptoCardSkeleton';
 import ErrorRetry from '@/components/ErrorRetry';
 import ThemeToggle from '@/components/ThemeToggle';
-import CurrencySelector from '@/components/CurrencySelector';
-import TimezoneSelector from '@/components/TimezoneSelector';
 import RefreshButton from '@/components/RefreshButton';
 import CoinSearch from '@/components/CoinSearch';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import ExtensionGuard from '@/components/ExtensionGuard';
 
 
 export default function Home() {
@@ -80,8 +80,17 @@ export default function Home() {
     setUserCoins(newCoins);
   };
 
+  const handleUpdateCoin = (coinId: string, newData: CryptoCurrency) => {
+    setCryptos(prevCryptos =>
+      prevCryptos.map(crypto =>
+        crypto.id === coinId ? newData : crypto
+      )
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
+    <ExtensionGuard>
+      <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-300">
       {/* 头部 */}
       <header className="bg-white dark:bg-black shadow-sm border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -101,8 +110,6 @@ export default function Home() {
                 <Plus className="w-5 h-5 sm:w-5 sm:h-5" />
               </button>
               <RefreshButton onRefresh={handleRefresh} isLoading={isLoading} />
-              <CurrencySelector />
-              <TimezoneSelector />
               <ThemeToggle />
             </div>
           </div>
@@ -135,12 +142,21 @@ export default function Home() {
             // 实际数据
             cryptos.map((crypto) => (
               <ErrorBoundary key={crypto.id}>
-                <CryptoCard
-                  crypto={crypto}
-                  isLoading={false}
-                  onRemove={handleRemoveCoin}
-                  showRemoveButton={true}
-                />
+                {crypto.id.startsWith('manual-') ? (
+                  <ManualCoinCard
+                    crypto={crypto}
+                    onRemove={handleRemoveCoin}
+                    onUpdate={handleUpdateCoin}
+                    showRemoveButton={true}
+                  />
+                ) : (
+                  <CryptoCard
+                    crypto={crypto}
+                    isLoading={false}
+                    onRemove={handleRemoveCoin}
+                    showRemoveButton={true}
+                  />
+                )}
               </ErrorBoundary>
             ))
           )}
@@ -197,6 +213,7 @@ export default function Home() {
         onClose={() => setIsSearchOpen(false)}
         onAddCoin={handleAddCoin}
       />
-    </div>
+      </div>
+    </ExtensionGuard>
   );
 }

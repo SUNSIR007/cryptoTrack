@@ -6,7 +6,7 @@ import { formatPrice, formatPercentage, formatMarketCap, formatSupply, fetchPric
 import { useDebounce, useMemoizedCalculation } from '../hooks/usePerformance';
 import PriceChart from './PriceChart';
 import ChartControls from './ChartControls';
-import { TrendingUp, TrendingDown, BarChart3, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, X, Clock } from 'lucide-react';
 import { isDefaultCoin } from '../lib/userCoins';
 
 const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemove, showRemoveButton = true }: CryptoCardProps) {
@@ -107,7 +107,18 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
   };
 
   return (
-    <div className="bg-white dark:bg-black rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 hover:scale-102">
+    <div className="bg-white dark:bg-black rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 hover:scale-102 relative group">
+      {/* Mac风格关闭按钮 */}
+      {showRemoveButton && onRemove && (
+        <button
+          onClick={() => onRemove(crypto.id)}
+          className="absolute top-2 right-2 w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100 z-10 shadow-md"
+          title="移除此币种"
+        >
+          <X className="w-2.5 h-2.5 text-white opacity-0 hover:opacity-100 transition-opacity duration-200" />
+        </button>
+      )}
+
       <div className="space-y-4">
         {/* 币种名称和符号 */}
         <div className="flex items-center justify-between">
@@ -127,35 +138,22 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
             </p>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {/* 删除按钮 - 只对非默认币种显示 */}
-            {showRemoveButton && onRemove && !isDefaultCoin(crypto.id) && (
-              <button
-                onClick={() => onRemove(crypto.id)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors group"
-                title="移除此币种"
-              >
-                <X className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
-              </button>
-            )}
-
-            {/* 币种图标 */}
-            <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-            <img
-              src={getIconUrl()}
-              alt={crypto.name}
-              className="w-10 h-10 object-cover rounded-full"
-              onError={(e) => {
-                // 如果图片加载失败，显示首字母
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.innerHTML = `<span class="text-gray-600 dark:text-gray-300 font-bold text-sm">${crypto.symbol.charAt(0)}</span>`;
-                }
-              }}
-            />
-            </div>
+          {/* 币种图标 */}
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <img
+            src={getIconUrl()}
+            alt={crypto.name}
+            className="w-10 h-10 object-cover rounded-full"
+            onError={(e) => {
+              // 如果图片加载失败，显示首字母
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const parent = target.parentElement;
+              if (parent) {
+                parent.innerHTML = `<span class="text-gray-600 dark:text-gray-300 font-bold text-sm">${crypto.symbol.charAt(0)}</span>`;
+              }
+            }}
+          />
           </div>
         </div>
 
@@ -247,6 +245,26 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
           </div>
         </div>
 
+        {/* 刷新时间显示 */}
+        <div className="pt-3 border-t border-gray-100 dark:border-gray-800 mt-4">
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex items-center space-x-1">
+              <Clock className="w-3 h-3" />
+              <span>
+                更新于 {new Date(crypto.last_updated).toLocaleTimeString('zh-CN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                })}
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span>实时数据</span>
+            </div>
+          </div>
+        </div>
 
       </div>
     </div>

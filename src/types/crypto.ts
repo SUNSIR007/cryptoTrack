@@ -14,6 +14,37 @@ export interface CryptoCurrency {
   circulating_supply: number;
   total_supply: number;
   last_updated: string;
+  // DexScreener特有数据（可选）
+  dexscreener_data?: {
+    pairAddress?: string;
+    dexId?: string;
+    url?: string;
+    liquidity?: number;
+    fdv?: number;
+    pairCreatedAt?: number;
+    txns?: {
+      h24?: {
+        buys?: number;
+        sells?: number;
+      };
+    };
+    volume?: {
+      h1?: number;
+      h6?: number;
+      h24?: number;
+    };
+    priceChange?: {
+      h1?: number;
+      h6?: number;
+      h24?: number;
+    };
+    quoteToken?: {
+      address?: string;
+      name?: string;
+      symbol?: string;
+    };
+    chainId?: string;
+  };
 }
 
 export interface CoinGeckoDetailedResponse {

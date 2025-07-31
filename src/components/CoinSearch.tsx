@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Plus, X } from 'lucide-react';
 import { SearchResult } from '@/types/crypto';
-import { searchCoins } from '@/lib/api';
+import { searchCoins, searchNewCoins, getMemeCoinSuggestions, searchAndGetTokenPrice } from '@/lib/api';
+import { apiCache } from '@/lib/apiCache';
 
 interface CoinSearchProps {
   onAddCoin: (coinId: string) => void;
@@ -16,6 +17,7 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -23,19 +25,88 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
+      setShowSuggestions(false);
       return;
     }
 
     const timeoutId = setTimeout(async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
-        const searchResults = await searchCoins(query);
+        // 检测是否为Solana代币地址
+        const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(query.trim());
+
+        if (isSolanaAddress) {
+          console.log('检测到代币地址，尝试获取代币信息...');
+
+          // 尝试获取代币信息
+          const tokenData = await searchAndGetTokenPrice(query.trim());
+
+          if (tokenData) {
+            // 将代币数据转换为搜索结果格式
+            const tokenName = tokenData.name || tokenData.symbol || 'Unknown Token';
+            const tokenResult = {
+              id: `manual-${tokenName.toLowerCase().replace(/\s+/g, '-')}`,
+              name: tokenName,
+              symbol: tokenData.symbol || 'UNKNOWN',
+              thumb: tokenData.image || '',
+              market_cap_rank: 0
+            };
+
+            console.log('成功获取代币信息:', tokenResult);
+            setResults([tokenResult]);
+            setShowSuggestions(false);
+            setError(null);
+            setIsLoading(false);
+            return;
+          } else {
+            console.log('无法获取代币信息');
+            // 不显示错误，而是提供手动添加选项
+            setResults([]);
+            setShowSuggestions(false);
+            setError(null);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // 清除相关的搜索缓存以确保获取最新结果
+        apiCache.clearByPrefix(`search-${query.toLowerCase()}`);
+
+        // 首先尝试标准搜索
+        let searchResults = await searchCoins(query);
+        console.log(`搜索 "${query}" 的结果:`, searchResults);
+
+        // 如果标准搜索没有结果，尝试新币种搜索
+        if (searchResults.length === 0) {
+          console.log('标准搜索无结果，尝试新币种搜索...');
+          const newCoinResults = await searchNewCoins(query);
+          if (newCoinResults.length > 0) {
+            searchResults = newCoinResults;
+            console.log('新币种搜索结果:', newCoinResults);
+          }
+        }
+
+        // 如果还是没有结果，显示meme币建议
+        if (searchResults.length === 0) {
+          const suggestions = getMemeCoinSuggestions(query);
+          if (suggestions.length > 0) {
+            searchResults = suggestions;
+            setShowSuggestions(true);
+          } else {
+            setShowSuggestions(false);
+          }
+        } else {
+          setShowSuggestions(false);
+        }
+
         setResults(searchResults);
       } catch (err) {
+        console.error('搜索失败:', err);
         setError('搜索失败，请稍后重试');
         setResults([]);
+        setShowSuggestions(false);
       } finally {
         setIsLoading(false);
       }
@@ -81,102 +152,148 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
   }, [isOpen, onClose]);
 
   const handleAddCoin = (coinId: string) => {
+    // 检查是否是有效的币种ID
+    if (!coinId || coinId === '') {
+      setError('无法添加此币种，请尝试其他搜索词');
+      return;
+    }
+
     onAddCoin(coinId);
     setQuery('');
     setResults([]);
+    setShowSuggestions(false);
     onClose();
+  };
+
+  // 手动添加币种（用于未收录的币种）
+  const handleManualAdd = async () => {
+    if (!query.trim()) {
+      setError('请输入币种名称或代币地址');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // 检测是否为Solana代币地址
+      const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(query.trim());
+
+      if (isSolanaAddress) {
+        console.log('检测到代币地址，尝试获取代币信息...');
+
+        // 尝试获取代币信息
+        const tokenData = await searchAndGetTokenPrice(query.trim());
+
+        if (tokenData) {
+          // 使用代币的真实名称创建ID
+          const tokenName = tokenData.name || tokenData.symbol || 'Unknown';
+          const manualCoinId = `manual-${tokenName.toLowerCase().replace(/\s+/g, '-')}`;
+
+          console.log(`成功获取代币信息: ${tokenName}`);
+          onAddCoin(manualCoinId);
+        } else {
+          // 如果无法获取代币信息，使用地址的简化版本
+          const shortAddress = `${query.slice(0, 6)}...${query.slice(-4)}`;
+          const manualCoinId = `manual-${shortAddress}`;
+          console.log('无法获取代币信息，使用简化地址');
+          onAddCoin(manualCoinId);
+        }
+      } else {
+        // 普通币种名称
+        const manualCoinId = `manual-${query.toLowerCase().replace(/\s+/g, '-')}`;
+        onAddCoin(manualCoinId);
+      }
+
+      setQuery('');
+      setResults([]);
+      setShowSuggestions(false);
+      onClose();
+    } catch (error) {
+      console.error('手动添加币种失败:', error);
+      setError('添加失败，请检查输入的币种名称或地址');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div 
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
         ref={searchRef}
-        className="bg-white dark:bg-black rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700"
+        className="w-full max-w-2xl"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* 头部 */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            添加币种
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-          </button>
-        </div>
-
-        {/* 搜索框 */}
-        <div className="p-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索币种名称或符号..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-
-        {/* 搜索结果 */}
-        <div className="max-h-80 overflow-y-auto">
+        {/* Google风格的搜索框 */}
+        <div className="relative">
+          <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="搜索币种名称、符号或代币地址..."
+            className="w-full pl-14 pr-14 py-4 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200 shadow-lg hover:shadow-xl"
+            autoFocus
+          />
           {isLoading && (
-            <div className="p-6 text-center">
-              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">搜索中...</p>
-            </div>
-          )}
-
-          {error && (
-            <div className="p-6 text-center">
-              <p className="text-sm text-red-500">{error}</p>
-            </div>
-          )}
-
-          {!isLoading && !error && query && results.length === 0 && (
-            <div className="p-6 text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">未找到相关币种</p>
-            </div>
-          )}
-
-          {results.length > 0 && (
-            <div className="pb-4">
-              {results.map((coin) => (
-                <button
-                  key={coin.id}
-                  onClick={() => handleAddCoin(coin.id)}
-                  className="w-full flex items-center space-x-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                >
-                  <img 
-                    src={coin.thumb} 
-                    alt={coin.name}
-                    className="w-8 h-8 rounded-full"
-                  />
-                  <div className="flex-1 text-left">
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      {coin.name}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {coin.symbol} • 排名 #{coin.market_cap_rank}
-                    </div>
-                  </div>
-                  <Plus className="w-5 h-5 text-gray-400" />
-                </button>
-              ))}
+            <div className="absolute right-6 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-yellow-500"></div>
             </div>
           )}
         </div>
 
-        {!query && (
-          <div className="p-6 text-center border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              输入币种名称或符号开始搜索
-            </p>
+        {/* 搜索结果 - 简化版本 */}
+        {(results.length > 0 || (!isLoading && !error && query && results.length === 0)) && (
+          <div className="mt-4 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden max-h-80 overflow-y-auto">
+            {results.length > 0 ? (
+              <div>
+                {results.map((coin) => (
+                  <button
+                    key={coin.id}
+                    onClick={() => handleAddCoin(coin.id)}
+                    className="w-full flex items-center space-x-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 border-b border-gray-100 dark:border-gray-700 last:border-b-0 group"
+                  >
+                    <div className="relative">
+                      <img
+                        src={coin.thumb}
+                        alt={coin.name}
+                        className="w-10 h-10 rounded-full shadow-sm"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-gray-900 dark:text-white">
+                        {coin.name}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {coin.symbol}
+                      </div>
+                    </div>
+                    <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/30 transition-colors">
+                      <Plus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-6 text-center">
+                <button
+                  onClick={handleManualAdd}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-medium transition-colors"
+                >
+                  添加 "{query}" 到监控列表
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
