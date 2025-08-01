@@ -48,6 +48,8 @@ export const metadata: Metadata = {
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'default',
     'format-detection': 'telephone=no',
+    // Google Search Console 验证 - 请替换为您的实际验证码
+    'google-site-verification': 'YOUR_VERIFICATION_CODE_HERE',
   }
 };
 
