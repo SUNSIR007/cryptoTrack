@@ -128,39 +128,6 @@ export default function Home() {
 
       {/* 主要内容 */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* 教育声明横幅 */}
-        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-start space-x-3">
-            <div className="text-blue-600 dark:text-blue-400 text-xl">📚</div>
-            <div className="flex-1">
-              <h2 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">
-                教育用途声明
-              </h2>
-              <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                本网站是开源的教育项目，仅用于学习和信息展示。我们不提供投资建议，不进行任何金融交易，不收集用户个人信息。
-                所有数据来源于公开API，仅供参考。投资有风险，请谨慎决策。
-              </p>
-              <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                <a href="https://github.com/SUNSIR007/cryptoTrack"
-                   target="_blank" rel="noopener noreferrer"
-                   className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
-                  🔗 查看源代码
-                </a>
-                <a href="/security"
-                   className="text-blue-600 dark:text-blue-400 hover:underline flex items-center">
-                  🔒 安全声明
-                </a>
-                <span className="text-blue-600 dark:text-blue-400 flex items-center">
-                  ✅ 开源项目
-                </span>
-                <span className="text-blue-600 dark:text-blue-400 flex items-center">
-                  🚫 无金融交易
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
         {/* API 状态检查 */}
         <ApiStatus className="mb-6" />
 
@@ -250,21 +217,7 @@ export default function Home() {
               ⚠️ 仅供教育和信息参考，不构成投资建议。投资有风险，请谨慎决策。
             </p>
             <p className="mt-1">© 2024 CryptoTrack. Built with Next.js & Tailwind CSS</p>
-            <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs">
-              <a
-                href="/about"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                关于我们
-              </a>
-              <span className="text-gray-400">|</span>
-              <a
-                href="/privacy"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                隐私政策
-              </a>
-              <span className="text-gray-400">|</span>
+            <div className="mt-3 space-x-4">
               <a
                 href="/security"
                 className="text-blue-600 dark:text-blue-400 hover:underline"
