@@ -6,6 +6,22 @@ import { SearchResult } from '@/types/crypto';
 import { searchCoins, searchNewCoins, getMemeCoinSuggestions, searchAndGetTokenPrice, searchMultiChainTokens } from '@/lib/api';
 import { apiCache } from '@/lib/apiCache';
 
+// 标准化EVM地址（补充前导零）
+function normalizeEVMAddress(address: string): string {
+  if (!address.startsWith('0x')) {
+    return address;
+  }
+
+  // 如果地址长度不足42个字符，补充前导零
+  if (address.length < 42) {
+    const hexPart = address.slice(2);
+    const paddedHex = hexPart.padStart(40, '0');
+    return '0x' + paddedHex;
+  }
+
+  return address;
+}
+
 // 检测代币地址类型
 function detectTokenAddressType(address: string): { isValid: boolean; network?: string; networkName?: string } {
   // Solana地址
@@ -13,9 +29,12 @@ function detectTokenAddressType(address: string): { isValid: boolean; network?: 
     return { isValid: true, network: 'solana', networkName: 'Solana' };
   }
 
-  // EVM地址（以太坊、BSC等）
-  if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
-    return { isValid: true, network: 'evm', networkName: 'EVM (Ethereum/BSC)' };
+  // 标准化EVM地址
+  const normalizedAddress = normalizeEVMAddress(address);
+
+  // EVM地址（以太坊、BSC、OKX等）
+  if (/^0x[a-fA-F0-9]{40}$/.test(normalizedAddress)) {
+    return { isValid: true, network: 'evm', networkName: 'EVM (Ethereum/BSC/OKX)' };
   }
 
   return { isValid: false };
@@ -55,9 +74,12 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
         if (addressInfo.isValid) {
           console.log(`检测到${addressInfo.networkName}代币地址，尝试获取代币信息...`);
 
+          // 标准化地址
+          const normalizedQuery = addressInfo.network === 'evm' ? normalizeEVMAddress(query.trim()) : query.trim();
+
           // 尝试获取代币信息
-          console.log(`🔍 尝试获取代币信息: ${query.trim()}`);
-          const tokenData = await searchAndGetTokenPrice(query.trim());
+          console.log(`🔍 尝试获取代币信息: ${normalizedQuery} (原始: ${query.trim()})`);
+          const tokenData = await searchAndGetTokenPrice(normalizedQuery);
           console.log('🔍 searchAndGetTokenPrice 返回结果:', tokenData);
 
           if (tokenData) {
