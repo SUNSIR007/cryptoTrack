@@ -9,6 +9,38 @@ import ChartControls from './ChartControls';
 import { TrendingUp, TrendingDown, BarChart3, X, Clock } from 'lucide-react';
 import { isDefaultCoin } from '../lib/userCoins';
 
+// 获取代币网络信息
+function getTokenNetworkInfo(crypto: any): { network: string; networkName: string; color: string } | null {
+  // 检查是否有DexScreener数据（通常是Solana）
+  if (crypto.dexscreener_data?.chainId) {
+    const chainId = crypto.dexscreener_data.chainId;
+    if (chainId === 'solana') {
+      return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
+    }
+  }
+
+  // 检查ID前缀
+  if (crypto.id.startsWith('gt-bsc-')) {
+    return { network: 'BSC', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
+  }
+
+  if (crypto.id.startsWith('gt-eth-')) {
+    return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
+  }
+
+  if (crypto.id.startsWith('dex-') || crypto.id.includes('solana')) {
+    return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
+  }
+
+  // 默认主流币种
+  const mainnetTokens = ['bitcoin', 'ethereum', 'binancecoin', 'solana'];
+  if (mainnetTokens.includes(crypto.id)) {
+    return null; // 主流币种不显示网络标签
+  }
+
+  return null;
+}
+
 const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemove, showRemoveButton = true }: CryptoCardProps) {
   const [chartPeriod, setChartPeriod] = useState('7');
   const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
@@ -123,7 +155,7 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
         {/* 币种名称和符号 */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 flex-wrap">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 {crypto.symbol}
               </h3>
@@ -132,6 +164,17 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
                   #{crypto.market_cap_rank}
                 </span>
               )}
+              {(() => {
+                const networkInfo = getTokenNetworkInfo(crypto);
+                return networkInfo ? (
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full font-medium ${networkInfo.color}`}
+                    title={`${networkInfo.networkName} 网络`}
+                  >
+                    {networkInfo.network}
+                  </span>
+                ) : null;
+              })()}
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {crypto.name}

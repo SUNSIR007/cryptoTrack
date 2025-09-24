@@ -5,6 +5,32 @@ import { X, RefreshCw, Clock } from 'lucide-react';
 import { CryptoCurrency } from '@/types/crypto';
 import { searchAndGetTokenPrice } from '@/lib/api';
 
+// 获取代币网络信息
+function getTokenNetworkInfo(crypto: any): { network: string; networkName: string; color: string } | null {
+  // 检查是否有DexScreener数据（通常是Solana）
+  if (crypto.dexscreener_data?.chainId) {
+    const chainId = crypto.dexscreener_data.chainId;
+    if (chainId === 'solana') {
+      return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
+    }
+  }
+
+  // 检查ID前缀
+  if (crypto.id.startsWith('gt-bsc-')) {
+    return { network: 'BSC', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
+  }
+
+  if (crypto.id.startsWith('gt-eth-')) {
+    return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
+  }
+
+  if (crypto.id.startsWith('dex-') || crypto.id.includes('solana')) {
+    return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
+  }
+
+  return null;
+}
+
 interface ManualCoinCardProps {
   crypto: CryptoCurrency;
   onRemove?: (coinId: string) => void;
@@ -220,13 +246,24 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
         {/* 币种信息和操作按钮 - 与左边卡片布局一致 */}
         <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="flex items-center space-x-2 mb-1">
+            <div className="flex items-center space-x-2 mb-1 flex-wrap">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 {coinName}
               </h3>
               <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
                 {crypto.symbol || coinName.toUpperCase()}
               </span>
+              {(() => {
+                const networkInfo = getTokenNetworkInfo(crypto);
+                return networkInfo ? (
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full font-medium ${networkInfo.color}`}
+                    title={`${networkInfo.networkName} 网络`}
+                  >
+                    {networkInfo.network}
+                  </span>
+                ) : null;
+              })()}
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {hasRealData ? 'DexScreener' : '等待数据'}

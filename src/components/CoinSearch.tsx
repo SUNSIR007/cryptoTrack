@@ -3,8 +3,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Plus, X } from 'lucide-react';
 import { SearchResult } from '@/types/crypto';
-import { searchCoins, searchNewCoins, getMemeCoinSuggestions, searchAndGetTokenPrice } from '@/lib/api';
+import { searchCoins, searchNewCoins, getMemeCoinSuggestions, searchAndGetTokenPrice, searchMultiChainTokens } from '@/lib/api';
 import { apiCache } from '@/lib/apiCache';
+
+// 检测代币地址类型
+function detectTokenAddressType(address: string): { isValid: boolean; network?: string; networkName?: string } {
+  // Solana地址
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
+    return { isValid: true, network: 'solana', networkName: 'Solana' };
+  }
+
+  // EVM地址（以太坊、BSC等）
+  if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    return { isValid: true, network: 'evm', networkName: 'EVM (Ethereum/BSC)' };
+  }
+
+  return { isValid: false };
+}
 
 interface CoinSearchProps {
   onAddCoin: (coinId: string) => void;
@@ -34,11 +49,11 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
       setError(null);
 
       try {
-        // 检测是否为Solana代币地址
-        const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(query.trim());
+        // 检测代币地址类型
+        const addressInfo = detectTokenAddressType(query.trim());
 
-        if (isSolanaAddress) {
-          console.log('检测到代币地址，尝试获取代币信息...');
+        if (addressInfo.isValid) {
+          console.log(`检测到${addressInfo.networkName}代币地址，尝试获取代币信息...`);
 
           // 尝试获取代币信息
           const tokenData = await searchAndGetTokenPrice(query.trim());
@@ -74,13 +89,13 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
         // 清除相关的搜索缓存以确保获取最新结果
         apiCache.clearByPrefix(`search-${query.toLowerCase()}`);
 
-        // 首先尝试标准搜索
-        let searchResults = await searchCoins(query);
-        console.log(`搜索 "${query}" 的结果:`, searchResults);
+        // 首先尝试多链搜索（包括BSC）
+        let searchResults = await searchMultiChainTokens(query);
+        console.log(`多链搜索 "${query}" 的结果:`, searchResults);
 
-        // 如果标准搜索没有结果，尝试新币种搜索
+        // 如果多链搜索没有结果，尝试新币种搜索
         if (searchResults.length === 0) {
-          console.log('标准搜索无结果，尝试新币种搜索...');
+          console.log('多链搜索无结果，尝试新币种搜索...');
           const newCoinResults = await searchNewCoins(query);
           if (newCoinResults.length > 0) {
             searchResults = newCoinResults;
@@ -176,11 +191,11 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
     setError(null);
 
     try {
-      // 检测是否为Solana代币地址
-      const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(query.trim());
+      // 检测代币地址类型
+      const addressInfo = detectTokenAddressType(query.trim());
 
-      if (isSolanaAddress) {
-        console.log('检测到代币地址，尝试获取代币信息...');
+      if (addressInfo.isValid) {
+        console.log(`检测到${addressInfo.networkName}代币地址，尝试获取代币信息...`);
 
         // 尝试获取代币信息
         const tokenData = await searchAndGetTokenPrice(query.trim());
@@ -237,7 +252,7 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索币种名称、符号或代币地址..."
+            placeholder="搜索币种名称、符号或代币地址（支持 Solana、BSC、Ethereum）..."
             className="w-full pl-14 pr-14 py-4 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-200 shadow-lg hover:shadow-xl"
             autoFocus
           />

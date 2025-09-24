@@ -37,12 +37,44 @@ const BirdeyeAPI = {
   PRICE: 'https://public-api.birdeye.so/defi/price'
 };
 
+// GeckoTerminal API for multi-chain DEX data
+const GeckoTerminalAPI = {
+  BASE_URL: 'https://api.geckoterminal.com/api/v2',
+  NETWORKS: 'https://api.geckoterminal.com/api/v2/networks',
+  SEARCH: 'https://api.geckoterminal.com/api/v2/search/pools'
+};
+
 // 币种ID映射
 const SUPPORTED_CRYPTO_IDS = {
   bitcoin: 'bitcoin',
   ethereum: 'ethereum',
   solana: 'solana',
   bnb: 'binancecoin' // BNB币
+};
+
+// 支持的区块链网络配置
+const SUPPORTED_NETWORKS = {
+  ethereum: {
+    id: 'eth',
+    name: 'Ethereum',
+    coingecko_id: 'ethereum',
+    address_pattern: /^0x[a-fA-F0-9]{40}$/,
+    native_token: 'ethereum'
+  },
+  bsc: {
+    id: 'bsc',
+    name: 'BNB Chain',
+    coingecko_id: 'binance-smart-chain',
+    address_pattern: /^0x[a-fA-F0-9]{40}$/,
+    native_token: 'binancecoin'
+  },
+  solana: {
+    id: 'solana',
+    name: 'Solana',
+    coingecko_id: 'solana',
+    address_pattern: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+    native_token: 'solana'
+  }
 };
 
 export async function fetchCryptoPrices(coinIds?: string[], currency: string = 'usd'): Promise<CryptoCurrency[]> {
@@ -595,29 +627,209 @@ function isSolanaTokenAddress(input: string): boolean {
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(input);
 }
 
+// 检测代币地址所属的网络
+function detectTokenNetwork(address: string): string | null {
+  for (const [networkKey, network] of Object.entries(SUPPORTED_NETWORKS)) {
+    if (network.address_pattern.test(address)) {
+      return networkKey;
+    }
+  }
+  return null;
+}
+
+// 检查是否为EVM兼容地址（以太坊、BSC等）
+function isEVMTokenAddress(address: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+// 搜索多链代币（包括BSC）
+export async function searchMultiChainTokens(query: string): Promise<SearchResult[]> {
+  const results: SearchResult[] = [];
+
+  try {
+    // 首先尝试标准的CoinGecko搜索
+    const coinGeckoResults = await searchCoins(query);
+    results.push(...coinGeckoResults);
+
+    // 如果CoinGecko结果不足，尝试GeckoTerminal搜索BSC代币
+    if (results.length < 5) {
+      const bscResults = await searchTokenOnGeckoTerminal(query, 'bsc');
+
+      // 转换GeckoTerminal结果为SearchResult格式
+      const convertedResults = bscResults.slice(0, 5 - results.length).map((pool: any) => {
+        const token = pool.attributes?.base_token;
+        return {
+          id: `gt-bsc-${token?.address || 'unknown'}`,
+          name: token?.name || 'Unknown Token',
+          symbol: (token?.symbol || 'UNKNOWN').toUpperCase(),
+          thumb: token?.image_url || '',
+          market_cap_rank: 0
+        };
+      });
+
+      results.push(...convertedResults);
+    }
+
+    return results;
+  } catch (error) {
+    console.error('多链代币搜索失败:', error);
+    return results; // 返回已有结果，即使出错
+  }
+}
+
+// 从 GeckoTerminal 搜索代币
+export async function searchTokenOnGeckoTerminal(query: string, network?: string): Promise<any[]> {
+  const cacheKey = `geckoterminal-search-${query.toLowerCase()}-${network || 'all'}`;
+
+  // 检查缓存
+  const cachedData = apiCache.get<any[]>(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
+  try {
+    let url = `${GeckoTerminalAPI.SEARCH}?query=${encodeURIComponent(query)}`;
+    if (network) {
+      url += `&network=${network}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`GeckoTerminal搜索失败: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const pools = data.data || [];
+
+    // 缓存结果
+    apiCache.set(cacheKey, pools, 2 * 60 * 1000); // 2分钟缓存
+
+    return pools;
+  } catch (error) {
+    console.error('GeckoTerminal搜索失败:', error);
+    return [];
+  }
+}
+
+// 从 GeckoTerminal 获取代币价格
+export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, network: string): Promise<CryptoCurrency | null> {
+  const cacheKey = `geckoterminal-price-${network}-${tokenAddress}`;
+
+  // 检查缓存
+  const cachedData = apiCache.get<CryptoCurrency>(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
+  try {
+    // 获取网络配置
+    const networkConfig = SUPPORTED_NETWORKS[network as keyof typeof SUPPORTED_NETWORKS];
+    if (!networkConfig) {
+      console.error(`不支持的网络: ${network}`);
+      return null;
+    }
+
+    // 使用 GeckoTerminal API 获取代币信息
+    const url = `${GeckoTerminalAPI.BASE_URL}/networks/${networkConfig.id}/tokens/${tokenAddress}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.log(`GeckoTerminal API响应: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log('GeckoTerminal响应数据:', JSON.stringify(data, null, 2));
+
+    if (!data.data) {
+      console.log('GeckoTerminal未找到代币信息');
+      return null;
+    }
+
+    const tokenData = data.data;
+    const attributes = tokenData.attributes;
+
+    // 转换为我们的数据格式
+    const cryptoData: CryptoCurrency = {
+      id: `gt-${network}-${tokenAddress}`,
+      symbol: attributes.symbol?.toUpperCase() || 'UNKNOWN',
+      name: attributes.name || attributes.symbol?.toUpperCase() || 'Unknown Token',
+      image: attributes.image_url || '',
+      current_price: parseFloat(attributes.price_usd) || 0,
+      price_change_percentage_24h: parseFloat(attributes.price_change_percentage?.h24) || 0,
+      price_change_percentage_7d: 0, // GeckoTerminal可能没有7天数据
+      market_cap: parseFloat(attributes.market_cap_usd) || 0,
+      market_cap_rank: 0,
+      total_volume: parseFloat(attributes.volume_usd?.h24) || 0,
+      high_24h: 0,
+      low_24h: 0,
+      circulating_supply: 0,
+      total_supply: parseFloat(attributes.total_supply) || 0,
+      last_updated: new Date().toISOString(),
+      // 添加GeckoTerminal特有的数据
+      dexscreener_data: {
+        chainId: network,
+        info: {
+          imageUrl: attributes.image_url,
+        }
+      }
+    };
+
+    // 缓存结果
+    apiCache.set(cacheKey, cryptoData, 1 * 60 * 1000); // 1分钟缓存
+
+    return cryptoData;
+  } catch (error) {
+    console.error('GeckoTerminal价格获取失败:', error);
+    return null;
+  }
+}
+
 // 通过代币名称或地址搜索并获取价格（多数据源）
 export async function searchAndGetTokenPrice(tokenNameOrAddress: string): Promise<CryptoCurrency | null> {
   try {
     const input = tokenNameOrAddress.trim();
     const inputLower = input.toLowerCase();
 
-    // 检查是否是代币地址
-    if (isSolanaTokenAddress(input)) {
-      console.log(`🔍 检测到代币地址: ${input}`);
+    // 检查是否是代币地址并检测网络
+    const detectedNetwork = detectTokenNetwork(input);
+    if (detectedNetwork) {
+      console.log(`🔍 检测到${SUPPORTED_NETWORKS[detectedNetwork as keyof typeof SUPPORTED_NETWORKS].name}代币地址: ${input}`);
 
-      // 直接使用地址获取价格数据
-      console.log('📡 尝试从DexScreener获取价格...');
-      let priceData = await getTokenPriceFromDexScreener(input);
-      if (priceData) {
-        console.log('✅ DexScreener获取成功:', priceData);
-        return priceData;
-      }
+      // 根据网络类型选择合适的API
+      if (detectedNetwork === 'solana') {
+        // Solana网络使用现有的DexScreener和Jupiter API
+        console.log('📡 尝试从DexScreener获取价格...');
+        let priceData = await getTokenPriceFromDexScreener(input);
+        if (priceData) {
+          console.log('✅ DexScreener获取成功:', priceData);
+          return priceData;
+        }
 
-      console.log('❌ DexScreener失败，尝试Jupiter...');
-      priceData = await getTokenPriceFromJupiter(input);
-      if (priceData) {
-        console.log('✅ Jupiter获取成功:', priceData);
-        return priceData;
+        console.log('❌ DexScreener失败，尝试Jupiter...');
+        priceData = await getTokenPriceFromJupiter(input);
+        if (priceData) {
+          console.log('✅ Jupiter获取成功:', priceData);
+          return priceData;
+        }
+      } else if (detectedNetwork === 'ethereum' || detectedNetwork === 'bsc') {
+        // EVM网络使用GeckoTerminal API
+        console.log(`📡 尝试从GeckoTerminal获取${SUPPORTED_NETWORKS[detectedNetwork as keyof typeof SUPPORTED_NETWORKS].name}代币价格...`);
+        const priceData = await getTokenPriceFromGeckoTerminal(input, detectedNetwork);
+        if (priceData) {
+          console.log('✅ GeckoTerminal获取成功:', priceData);
+          return priceData;
+        }
       }
 
       console.log('❌ 所有价格API都失败了');

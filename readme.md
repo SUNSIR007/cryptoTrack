@@ -1,16 +1,20 @@
 # CryptoTrack - 实时加密货币价格监测
 
-一个现代化的实时加密货币价格监测网站，支持BTC、ETH、SOL和pump.fun上的热门meme币（如Fartcoin）的价格追踪。
+一个现代化的实时加密货币价格监测网站，支持多链代币价格追踪，包括 Bitcoin、Ethereum、Solana、BSC 链代币和 pump.fun 上的热门 meme 币。
 
 ## 功能特性
 
-- 🚀 **实时价格监测** - 监测BTC、ETH、SOL和热门meme币的实时价格
+- 🚀 **多链代币支持** - 支持 Ethereum、BSC、Solana 链上的代币价格监测
+- 🔍 **智能地址识别** - 自动识别不同链的代币地址格式
+- 🌐 **多数据源整合** - 整合 CoinGecko、GeckoTerminal、DexScreener 等多个数据源
+- 📊 **实时价格监测** - 监测主流币种和热门 meme 币的实时价格
+- 🎯 **代币搜索** - 支持按名称、符号或地址搜索多链代币
+- 🛡️ **智能限制** - 代币数量限制和性能优化提醒
+- 🏷️ **网络标签** - 清晰显示代币所属区块链网络
 - 🌙 **深色/浅色模式** - 支持主题切换，深色模式背景为纯黑色
 - 📱 **响应式设计** - 适配各种设备屏幕尺寸
 - 🔄 **自动刷新** - 每5分钟自动更新价格数据
-- 🎯 **手动刷新** - 点击刷新按钮立即更新数据
 - 💎 **现代UI** - 圆角矩形卡片设计，简约美观
-- 📊 **价格变化** - 显示24小时价格变化百分比
 - ⚡ **快速加载** - 基于Next.js构建，性能优化
 
 ## 技术栈
@@ -19,15 +23,26 @@
 - **样式**: Tailwind CSS
 - **语言**: TypeScript
 - **图标**: Lucide React
-- **API**: CoinGecko API
+- **API**: CoinGecko API, GeckoTerminal API, DexScreener API
 - **部署**: Vercel
 
-## 监测的加密货币
+## 支持的区块链网络
 
+### 主要支持
+1. **Ethereum** - 以太坊主网代币
+2. **BSC (Binance Smart Chain)** - 币安智能链代币
+3. **Solana** - Solana 生态代币和 pump.fun meme 币
+
+### 默认监测代币
 1. **Bitcoin (BTC)** - 比特币
 2. **Ethereum (ETH)** - 以太坊
-3. **Solana (SOL)** - 索拉纳
-4. **Fartcoin (FARTCOIN)** - pump.fun上的热门meme币
+3. **BNB** - 币安币
+4. **Solana (SOL)** - 索拉纳
+
+### 代币添加方式
+- 🔍 **搜索添加**: 按名称或符号搜索
+- 📋 **地址添加**: 直接输入代币合约地址
+- 🎯 **智能识别**: 自动识别地址所属网络
 
 ## 快速开始
 

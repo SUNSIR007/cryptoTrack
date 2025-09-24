@@ -16,6 +16,7 @@ import CoinSearch from '@/components/CoinSearch';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ExtensionGuard from '@/components/ExtensionGuard';
 import ApiStatus from '@/components/ApiStatus';
+import CoinCountWarning from '@/components/CoinCountWarning';
 
 
 export default function Home() {
@@ -72,8 +73,15 @@ export default function Home() {
   };
 
   const handleAddCoin = (coinId: string) => {
-    const newCoins = addUserCoin(coinId);
-    setUserCoins(newCoins);
+    const result = addUserCoin(coinId);
+    if (result.success) {
+      setUserCoins(result.coins);
+    } else {
+      // 显示错误信息
+      setError(result.error || '添加代币失败');
+      // 3秒后清除错误信息
+      setTimeout(() => setError(null), 3000);
+    }
   };
 
   const handleRemoveCoin = (coinId: string) => {
@@ -141,6 +149,9 @@ export default function Home() {
             />
           </div>
         )}
+
+        {/* 代币数量警告 */}
+        <CoinCountWarning userCoins={userCoins} className="mb-6" />
 
         {/* 加密货币卡片网格 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
