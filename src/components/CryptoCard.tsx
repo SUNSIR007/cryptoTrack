@@ -137,8 +137,15 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
 
   // 获取币种图标URL
   const getIconUrl = () => {
+    console.log(`🔍 获取图标 URL for ${crypto.symbol}:`, {
+      id: crypto.id,
+      image: crypto.image,
+      name: crypto.name
+    });
+
     // 优先使用API返回的图标
     if (crypto.image && crypto.image.trim() !== '') {
+      console.log(`✅ 使用 API 图标: ${crypto.image}`);
       return crypto.image;
     }
 
@@ -152,6 +159,7 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
 
     // 如果是已知的主流币种，使用映射
     if (iconMap[crypto.id]) {
+      console.log(`✅ 使用主流币种图标: ${iconMap[crypto.id]}`);
       return iconMap[crypto.id];
     }
 
@@ -162,16 +170,24 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
         const chainId = parts[1];
         const tokenAddress = parts.slice(2).join('-');
 
+        let iconUrl = '';
         if (chainId === 'bsc') {
-          return `https://tokens.pancakeswap.finance/images/${tokenAddress}.png`;
+          iconUrl = `https://tokens.pancakeswap.finance/images/${tokenAddress}.png`;
         } else if (chainId === 'ethereum') {
-          return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${tokenAddress}/logo.png`;
+          iconUrl = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${tokenAddress}/logo.png`;
+        }
+
+        if (iconUrl) {
+          console.log(`✅ 使用 DexScreener 代币图标: ${iconUrl}`);
+          return iconUrl;
         }
       }
     }
 
     // 最后使用占位符
-    return `https://via.placeholder.com/40x40/6366f1/ffffff?text=${crypto.symbol.charAt(0)}`;
+    const placeholderUrl = `https://via.placeholder.com/40x40/6366f1/ffffff?text=${crypto.symbol.charAt(0)}`;
+    console.log(`⚠️ 使用占位符图标: ${placeholderUrl}`);
+    return placeholderUrl;
   };
 
   return (
@@ -262,28 +278,39 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
             src={getIconUrl()}
             alt={crypto.name}
             className="w-10 h-10 object-cover rounded-full"
+            onLoad={(e) => {
+              const target = e.target as HTMLImageElement;
+              console.log(`✅ 图标加载成功: ${target.src}`);
+            }}
             onError={(e) => {
               // 如果图片加载失败，尝试备用图标
               const target = e.target as HTMLImageElement;
               const currentSrc = target.src;
+
+              console.log(`❌ 图标加载失败: ${currentSrc}`);
 
               // 如果当前是 PancakeSwap 图标失败，尝试 Trust Wallet
               if (currentSrc.includes('pancakeswap.finance') && crypto.id.startsWith('dex-')) {
                 const parts = crypto.id.split('-');
                 if (parts.length >= 3) {
                   const tokenAddress = parts.slice(2).join('-');
-                  target.src = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/assets/${tokenAddress}/logo.png`;
+                  const trustWalletUrl = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/assets/${tokenAddress}/logo.png`;
+                  console.log(`🔄 尝试 Trust Wallet 图标: ${trustWalletUrl}`);
+                  target.src = trustWalletUrl;
                   return;
                 }
               }
 
               // 如果是 Trust Wallet 图标失败，尝试通用占位符
               if (currentSrc.includes('trustwallet') || currentSrc.includes('github.com')) {
-                target.src = `https://via.placeholder.com/40x40/6366f1/ffffff?text=${crypto.symbol.charAt(0)}`;
+                const placeholderUrl = `https://via.placeholder.com/40x40/6366f1/ffffff?text=${crypto.symbol.charAt(0)}`;
+                console.log(`🔄 尝试占位符图标: ${placeholderUrl}`);
+                target.src = placeholderUrl;
                 return;
               }
 
               // 最终失败，显示首字母
+              console.log(`💀 所有图标都失败，显示首字母: ${crypto.symbol.charAt(0)}`);
               target.style.display = 'none';
               const parent = target.parentElement;
               if (parent && !parent.querySelector('span')) {
@@ -377,12 +404,15 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
               {formatMarketCap(crypto.total_volume)}
             </span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-600 dark:text-gray-400">流通供应量</span>
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {formatSupply(crypto.circulating_supply)}
-            </span>
-          </div>
+          {/* 只有当流通供应量大于0时才显示 */}
+          {crypto.circulating_supply > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600 dark:text-gray-400">流通供应量</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                {formatSupply(crypto.circulating_supply)}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* 刷新时间显示 */}

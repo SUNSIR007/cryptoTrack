@@ -813,16 +813,22 @@ async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurr
     try {
       const symbol = tokenInfo.symbol?.toLowerCase();
       if (symbol) {
-        // 使用多个图标源
+        // 确保地址格式正确（校验和格式）
+        const checksumAddress = tokenAddress; // 保持原始地址格式
+
         if (bestPair.chainId === 'bsc') {
-          // BSC 代币尝试使用 BSCScan 或通用图标
-          tokenImage = `https://tokens.pancakeswap.finance/images/${tokenAddress}.png`;
+          // BSC 代币图标源优先级
+          // 1. PancakeSwap (使用原始地址)
+          tokenImage = `https://tokens.pancakeswap.finance/images/${checksumAddress}.png`;
+          console.log(`🔍 BSC 代币图标 URL: ${tokenImage}`);
         } else if (bestPair.chainId === 'ethereum') {
-          // Ethereum 代币使用 Uniswap 或通用图标
-          tokenImage = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${tokenAddress}/logo.png`;
+          // Ethereum 代币使用 Trust Wallet
+          tokenImage = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${checksumAddress}/logo.png`;
+          console.log(`🔍 ETH 代币图标 URL: ${tokenImage}`);
         } else {
           // 其他链使用通用占位符
           tokenImage = `https://via.placeholder.com/40x40/3B82F6/FFFFFF?text=${symbol.charAt(0).toUpperCase()}`;
+          console.log(`🔍 其他链占位符图标: ${tokenImage}`);
         }
       }
     } catch (error) {

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试代币图标 URL</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .test-item {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+        }
+        .icon-test {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .icon-test img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid #555;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .success { background-color: #22c55e; color: white; }
+        .error { background-color: #ef4444; color: white; }
+        .loading { background-color: #f59e0b; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔍 代币图标 URL 测试</h1>
+    
+    <div class="test-item">
+        <h3>ASTERO (BSC) - 0x000ae314e2a2172a039b26378814c252734f556a</h3>
+        
+        <div class="icon-test">
+            <img 
+                id="pancake-icon" 
+                src="https://tokens.pancakeswap.finance/images/0x000ae314e2a2172a039b26378814c252734f556a.png" 
+                alt="PancakeSwap Icon"
+                onload="updateStatus('pancake-status', 'success', '✅ 加载成功')"
+                onerror="updateStatus('pancake-status', 'error', '❌ 加载失败')"
+            />
+            <div>
+                <div>PancakeSwap 图标</div>
+                <div id="pancake-status" class="status loading">🔄 加载中...</div>
+            </div>
+        </div>
+        
+        <div class="icon-test">
+            <img 
+                id="trustwallet-icon" 
+                src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/assets/0x000ae314e2a2172a039b26378814c252734f556a/logo.png" 
+                alt="Trust Wallet Icon"
+                onload="updateStatus('trustwallet-status', 'success', '✅ 加载成功')"
+                onerror="updateStatus('trustwallet-status', 'error', '❌ 加载失败')"
+            />
+            <div>
+                <div>Trust Wallet 图标 (BSC)</div>
+                <div id="trustwallet-status" class="status loading">🔄 加载中...</div>
+            </div>
+        </div>
+        
+        <div class="icon-test">
+            <img 
+                id="trustwallet-eth-icon" 
+                src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x000ae314e2a2172a039b26378814c252734f556a/logo.png" 
+                alt="Trust Wallet ETH Icon"
+                onload="updateStatus('trustwallet-eth-status', 'success', '✅ 加载成功')"
+                onerror="updateStatus('trustwallet-eth-status', 'error', '❌ 加载失败')"
+            />
+            <div>
+                <div>Trust Wallet 图标 (ETH)</div>
+                <div id="trustwallet-eth-status" class="status loading">🔄 加载中...</div>
+            </div>
+        </div>
+        
+        <div class="icon-test">
+            <img 
+                id="placeholder-icon" 
+                src="https://via.placeholder.com/40x40/6366f1/ffffff?text=A" 
+                alt="Placeholder Icon"
+                onload="updateStatus('placeholder-status', 'success', '✅ 加载成功')"
+                onerror="updateStatus('placeholder-status', 'error', '❌ 加载失败')"
+            />
+            <div>
+                <div>占位符图标</div>
+                <div id="placeholder-status" class="status loading">🔄 加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-item">
+        <h3>DUST (BSC) - 0x932fb7f52adbc34ff81b4342b8c036b7b8ac4444</h3>
+        
+        <div class="icon-test">
+            <img 
+                id="dust-pancake-icon" 
+                src="https://tokens.pancakeswap.finance/images/0x932fb7f52adbc34ff81b4342b8c036b7b8ac4444.png" 
+                alt="DUST PancakeSwap Icon"
+                onload="updateStatus('dust-pancake-status', 'success', '✅ 加载成功')"
+                onerror="updateStatus('dust-pancake-status', 'error', '❌ 加载失败')"
+            />
+            <div>
+                <div>DUST PancakeSwap 图标</div>
+                <div id="dust-pancake-status" class="status loading">🔄 加载中...</div>
+            </div>
+        </div>
+        
+        <div class="icon-test">
+            <img 
+                id="dust-trustwallet-icon" 
+                src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/assets/0x932fb7f52adbc34ff81b4342b8c036b7b8ac4444/logo.png" 
+                alt="DUST Trust Wallet Icon"
+                onload="updateStatus('dust-trustwallet-status', 'success', '✅ 加载成功')"
+                onerror="updateStatus('dust-trustwallet-status', 'error', '❌ 加载失败')"
+            />
+            <div>
+                <div>DUST Trust Wallet 图标</div>
+                <div id="dust-trustwallet-status" class="status loading">🔄 加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(elementId, type, message) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.className = `status ${type}`;
+                element.textContent = message;
+            }
+        }
+
+        // 5秒后检查还在加载中的图标
+        setTimeout(() => {
+            const loadingElements = document.querySelectorAll('.status.loading');
+            loadingElements.forEach(element => {
+                element.className = 'status error';
+                element.textContent = '❌ 超时失败';
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
