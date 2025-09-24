@@ -716,6 +716,41 @@ export async function searchTokenOnGeckoTerminal(query: string, network?: string
   }
 }
 
+// 从 GeckoTerminal 获取代币的主要交易池信息
+async function getTokenMainPool(tokenAddress: string, network: string): Promise<any> {
+  try {
+    const networkConfig = SUPPORTED_NETWORKS[network as keyof typeof SUPPORTED_NETWORKS];
+    if (!networkConfig) return null;
+
+    // 获取代币信息，包含关联的池子
+    const tokenUrl = `${GeckoTerminalAPI.BASE_URL}/networks/${networkConfig.id}/tokens/${tokenAddress}?include=top_pools`;
+    const tokenResponse = await fetch(tokenUrl, {
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!tokenResponse.ok) return null;
+    const tokenData = await tokenResponse.json();
+
+    // 获取第一个（主要的）交易池
+    const topPools = tokenData.data?.relationships?.top_pools?.data;
+    if (!topPools || topPools.length === 0) return null;
+
+    const mainPoolId = topPools[0].id;
+
+    // 获取池子详细信息
+    const poolUrl = `${GeckoTerminalAPI.BASE_URL}/networks/${networkConfig.id}/pools/${mainPoolId.split('_')[1]}`;
+    const poolResponse = await fetch(poolUrl, {
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!poolResponse.ok) return null;
+    return await poolResponse.json();
+  } catch (error) {
+    console.error('获取主要交易池失败:', error);
+    return null;
+  }
+}
+
 // 从 GeckoTerminal 获取代币价格
 export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, network: string): Promise<CryptoCurrency | null> {
   const cacheKey = `geckoterminal-price-${network}-${tokenAddress}`;
@@ -759,6 +794,18 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
     const tokenData = data.data;
     const attributes = tokenData.attributes;
 
+    // 尝试获取主要交易池的价格变化数据
+    let priceChange24h = 0;
+    try {
+      const poolData = await getTokenMainPool(tokenAddress, network);
+      if (poolData?.data?.attributes?.price_change_percentage?.h24) {
+        priceChange24h = parseFloat(poolData.data.attributes.price_change_percentage.h24) || 0;
+        console.log(`获取到价格变化数据: ${priceChange24h}%`);
+      }
+    } catch (error) {
+      console.log('获取价格变化数据失败，使用默认值:', error);
+    }
+
     // 转换为我们的数据格式
     const cryptoData: CryptoCurrency = {
       id: `gt-${network}-${tokenAddress}`,
@@ -766,15 +813,15 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
       name: attributes.name || attributes.symbol?.toUpperCase() || 'Unknown Token',
       image: attributes.image_url || '',
       current_price: parseFloat(attributes.price_usd) || 0,
-      price_change_percentage_24h: parseFloat(attributes.price_change_percentage?.h24) || 0,
-      price_change_percentage_7d: 0, // GeckoTerminal可能没有7天数据
+      price_change_percentage_24h: priceChange24h,
+      price_change_percentage_7d: 0,
       market_cap: parseFloat(attributes.market_cap_usd) || 0,
       market_cap_rank: 0,
       total_volume: parseFloat(attributes.volume_usd?.h24) || 0,
       high_24h: 0,
       low_24h: 0,
       circulating_supply: 0,
-      total_supply: parseFloat(attributes.total_supply) || 0,
+      total_supply: parseFloat(attributes.normalized_total_supply) || parseFloat(attributes.total_supply) || 0,
       last_updated: new Date().toISOString(),
       // 添加GeckoTerminal特有的数据
       dexscreener_data: {
