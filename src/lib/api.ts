@@ -854,7 +854,7 @@ async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurr
       symbol: tokenInfo.symbol,
       symbolType: typeof tokenInfo.symbol,
       symbolLength: tokenInfo.symbol?.length,
-      symbolCharCodes: tokenInfo.symbol ? Array.from(tokenInfo.symbol).map(c => c.charCodeAt(0)) : [],
+      symbolCharCodes: tokenInfo.symbol ? Array.from(tokenInfo.symbol).map((c: string) => c.charCodeAt(0)) : [],
       name: tokenInfo.name,
       symbolUpperCase: tokenInfo.symbol?.toUpperCase(),
       bestPair: {

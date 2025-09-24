@@ -232,7 +232,7 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 {crypto.symbol}
               </h3>
-              {crypto.market_cap_rank && (
+              {crypto.market_cap_rank > 0 && (
                 <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full">
                   #{crypto.market_cap_rank}
                 </span>
