@@ -1270,6 +1270,15 @@ export async function searchAndGetTokenPrice(tokenNameOrAddress: string): Promis
       }
 
       console.log('❌ 所有价格API都失败了');
+
+      // 地址搜索失败时，提供更详细的错误信息
+      console.log(`❌ 无法找到地址 ${input} 的代币信息`);
+      console.log('可能的原因:');
+      console.log('1. 该地址不是有效的代币合约地址');
+      console.log('2. 该代币流动性极低，未被主要价格API收录');
+      console.log('3. 该代币是新发布的，还未被索引');
+      console.log('4. 该地址可能输入错误');
+
       return null;
     }
 
