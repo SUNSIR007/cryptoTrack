@@ -847,14 +847,31 @@ async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurr
       console.log('获取代币图标失败:', error);
     }
 
-    // 调试输出
+    // 详细调试输出
     console.log('🔍 DexScreener 代币信息调试:', {
       tokenAddress,
       tokenInfo,
       symbol: tokenInfo.symbol,
+      symbolType: typeof tokenInfo.symbol,
+      symbolLength: tokenInfo.symbol?.length,
+      symbolCharCodes: tokenInfo.symbol ? Array.from(tokenInfo.symbol).map(c => c.charCodeAt(0)) : [],
       name: tokenInfo.name,
       symbolUpperCase: tokenInfo.symbol?.toUpperCase(),
-      bestPair: bestPair
+      bestPair: {
+        chainId: bestPair.chainId,
+        pairAddress: bestPair.pairAddress,
+        baseToken: bestPair.baseToken,
+        quoteToken: bestPair.quoteToken
+      }
+    });
+
+    // 检查是否是 baseToken 还是 quoteToken
+    console.log('🔍 代币匹配检查:', {
+      inputAddress: tokenAddress.toLowerCase(),
+      baseTokenAddress: bestPair.baseToken.address.toLowerCase(),
+      quoteTokenAddress: bestPair.quoteToken.address.toLowerCase(),
+      isBaseToken: bestPair.baseToken.address.toLowerCase() === tokenAddress.toLowerCase(),
+      isQuoteToken: bestPair.quoteToken.address.toLowerCase() === tokenAddress.toLowerCase()
     });
 
     const cryptoData: CryptoCurrency = {
