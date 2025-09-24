@@ -56,17 +56,19 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
           console.log(`检测到${addressInfo.networkName}代币地址，尝试获取代币信息...`);
 
           // 尝试获取代币信息
+          console.log(`🔍 尝试获取代币信息: ${query.trim()}`);
           const tokenData = await searchAndGetTokenPrice(query.trim());
+          console.log('🔍 searchAndGetTokenPrice 返回结果:', tokenData);
 
           if (tokenData) {
             // 将代币数据转换为搜索结果格式
             const tokenName = tokenData.name || tokenData.symbol || 'Unknown Token';
             const tokenResult = {
-              id: `manual-${tokenName.toLowerCase().replace(/\s+/g, '-')}`,
+              id: tokenData.id, // 使用从API获取的原始ID
               name: tokenName,
               symbol: tokenData.symbol || 'UNKNOWN',
               thumb: tokenData.image || '',
-              market_cap_rank: 0
+              market_cap_rank: tokenData.market_cap_rank || 0
             };
 
             console.log('成功获取代币信息:', tokenResult);

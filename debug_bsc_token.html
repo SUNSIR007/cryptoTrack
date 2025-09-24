@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSC 代币调试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background: #333;
+            color: #fff;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success { border-left: 4px solid #28a745; }
+        .error { border-left: 4px solid #dc3545; }
+        .info { border-left: 4px solid #17a2b8; }
+    </style>
+</head>
+<body>
+    <h1>🔍 BSC 代币调试工具</h1>
+    
+    <div class="container">
+        <h2>测试地址检测</h2>
+        <input type="text" id="addressInput" placeholder="输入代币地址" value="0x000ae314e2a2172a039b26378814c252734f556a">
+        <button onclick="testAddressDetection()">测试地址检测</button>
+        <div id="addressResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>测试 GeckoTerminal API</h2>
+        <button onclick="testGeckoTerminalAPI()">测试 API 调用</button>
+        <div id="apiResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>测试完整流程</h2>
+        <button onclick="testFullFlow()">测试完整搜索流程</button>
+        <div id="fullResult" class="result"></div>
+    </div>
+
+    <script>
+        // 网络配置
+        const SUPPORTED_NETWORKS = {
+            ethereum: {
+                id: 'eth',
+                name: 'Ethereum',
+                address_pattern: /^0x[a-fA-F0-9]{40}$/,
+            },
+            bsc: {
+                id: 'bsc',
+                name: 'BNB Chain',
+                address_pattern: /^0x[a-fA-F0-9]{40}$/,
+            },
+            solana: {
+                id: 'solana',
+                name: 'Solana',
+                address_pattern: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+            }
+        };
+
+        // 检测代币地址所属的网络
+        function detectTokenNetwork(address) {
+            for (const [networkKey, network] of Object.entries(SUPPORTED_NETWORKS)) {
+                if (network.address_pattern.test(address)) {
+                    return networkKey;
+                }
+            }
+            return null;
+        }
+
+        // 测试地址检测
+        function testAddressDetection() {
+            const address = document.getElementById('addressInput').value.trim();
+            const result = document.getElementById('addressResult');
+            
+            console.log('🧪 测试地址检测:', address);
+            
+            const detectedNetwork = detectTokenNetwork(address);
+            
+            if (detectedNetwork) {
+                const networkInfo = SUPPORTED_NETWORKS[detectedNetwork];
+                result.className = 'result success';
+                result.textContent = `✅ 检测成功！
+地址: ${address}
+网络: ${networkInfo.name} (${detectedNetwork})
+网络ID: ${networkInfo.id}`;
+                console.log('✅ 地址检测成功:', detectedNetwork);
+            } else {
+                result.className = 'result error';
+                result.textContent = `❌ 无法识别地址格式: ${address}`;
+                console.log('❌ 地址检测失败');
+            }
+        }
+
+        // 测试 GeckoTerminal API
+        async function testGeckoTerminalAPI() {
+            const address = document.getElementById('addressInput').value.trim();
+            const result = document.getElementById('apiResult');
+            
+            result.className = 'result info';
+            result.textContent = '🔄 正在测试 API...';
+            
+            try {
+                const url = `https://api.geckoterminal.com/api/v2/networks/bsc/tokens/${address}`;
+                console.log('📡 API URL:', url);
+                
+                const response = await fetch(url, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                console.log('📡 API 响应状态:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📡 API 响应数据:', data);
+                    
+                    const attributes = data.data.attributes;
+                    result.className = 'result success';
+                    result.textContent = `✅ API 调用成功！
+代币名称: ${attributes.name}
+代币符号: ${attributes.symbol}
+当前价格: $${attributes.price_usd}
+市值: $${attributes.market_cap_usd}
+24h交易量: $${attributes.volume_usd?.h24}`;
+                } else {
+                    result.className = 'result error';
+                    result.textContent = `❌ API 调用失败: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error('❌ API 测试失败:', error);
+                result.className = 'result error';
+                result.textContent = `❌ API 测试失败: ${error.message}`;
+            }
+        }
+
+        // 测试完整流程
+        async function testFullFlow() {
+            const address = document.getElementById('addressInput').value.trim();
+            const result = document.getElementById('fullResult');
+            
+            result.className = 'result info';
+            result.textContent = '🔄 正在测试完整流程...';
+            
+            try {
+                console.log('🧪 开始完整流程测试:', address);
+                
+                // 步骤1: 地址检测
+                const detectedNetwork = detectTokenNetwork(address);
+                if (!detectedNetwork) {
+                    throw new Error('地址格式无效');
+                }
+                console.log('✅ 步骤1: 地址检测成功 -', detectedNetwork);
+                
+                // 步骤2: API 调用
+                const networkConfig = SUPPORTED_NETWORKS[detectedNetwork];
+                const url = `https://api.geckoterminal.com/api/v2/networks/${networkConfig.id}/tokens/${address}`;
+                
+                const response = await fetch(url, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API 响应错误: ${response.status}`);
+                }
+                console.log('✅ 步骤2: API 调用成功');
+                
+                // 步骤3: 数据解析
+                const data = await response.json();
+                if (!data.data) {
+                    throw new Error('API 返回数据为空');
+                }
+                console.log('✅ 步骤3: 数据解析成功');
+                
+                // 步骤4: 数据转换
+                const attributes = data.data.attributes;
+                const cryptoData = {
+                    id: `gt-${detectedNetwork}-${address}`,
+                    symbol: attributes.symbol?.toUpperCase() || 'UNKNOWN',
+                    name: attributes.name || attributes.symbol?.toUpperCase() || 'Unknown Token',
+                    image: attributes.image_url || '',
+                    current_price: parseFloat(attributes.price_usd) || 0,
+                    price_change_percentage_24h: 0,
+                    market_cap: parseFloat(attributes.market_cap_usd) || 0,
+                    total_volume: parseFloat(attributes.volume_usd?.h24) || 0,
+                };
+                console.log('✅ 步骤4: 数据转换成功', cryptoData);
+                
+                result.className = 'result success';
+                result.textContent = `✅ 完整流程测试成功！
+
+检测到的网络: ${networkConfig.name}
+代币信息:
+- ID: ${cryptoData.id}
+- 名称: ${cryptoData.name}
+- 符号: ${cryptoData.symbol}
+- 价格: $${cryptoData.current_price}
+- 市值: $${cryptoData.market_cap}
+- 24h交易量: $${cryptoData.total_volume}
+
+这个数据应该能够在搜索结果中正确显示！`;
+                
+            } catch (error) {
+                console.error('❌ 完整流程测试失败:', error);
+                result.className = 'result error';
+                result.textContent = `❌ 完整流程测试失败: ${error.message}`;
+            }
+        }
+
+        // 页面加载时自动运行地址检测
+        window.onload = function() {
+            testAddressDetection();
+        };
+    </script>
+</body>
+</html>

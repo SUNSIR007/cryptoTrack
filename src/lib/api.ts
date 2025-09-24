@@ -784,7 +784,7 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
     }
 
     const data = await response.json();
-    console.log('GeckoTerminal响应数据:', JSON.stringify(data, null, 2));
+    console.log('GeckoTerminal响应数据:', data);
 
     if (!data.data) {
       console.log('GeckoTerminal未找到代币信息');
@@ -794,17 +794,9 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
     const tokenData = data.data;
     const attributes = tokenData.attributes;
 
-    // 尝试获取主要交易池的价格变化数据
+    // 暂时跳过价格变化数据获取，专注于基本信息
     let priceChange24h = 0;
-    try {
-      const poolData = await getTokenMainPool(tokenAddress, network);
-      if (poolData?.data?.attributes?.price_change_percentage?.h24) {
-        priceChange24h = parseFloat(poolData.data.attributes.price_change_percentage.h24) || 0;
-        console.log(`获取到价格变化数据: ${priceChange24h}%`);
-      }
-    } catch (error) {
-      console.log('获取价格变化数据失败，使用默认值:', error);
-    }
+    console.log('暂时跳过价格变化数据获取');
 
     // 转换为我们的数据格式
     const cryptoData: CryptoCurrency = {
@@ -831,6 +823,8 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
         }
       }
     };
+
+    console.log('✅ 成功创建代币数据对象:', cryptoData);
 
     // 缓存结果
     apiCache.set(cacheKey, cryptoData, 1 * 60 * 1000); // 1分钟缓存
@@ -873,9 +867,12 @@ export async function searchAndGetTokenPrice(tokenNameOrAddress: string): Promis
         // EVM网络使用GeckoTerminal API
         console.log(`📡 尝试从GeckoTerminal获取${SUPPORTED_NETWORKS[detectedNetwork as keyof typeof SUPPORTED_NETWORKS].name}代币价格...`);
         const priceData = await getTokenPriceFromGeckoTerminal(input, detectedNetwork);
+        console.log('GeckoTerminal返回的数据:', priceData);
         if (priceData) {
           console.log('✅ GeckoTerminal获取成功:', priceData);
           return priceData;
+        } else {
+          console.log('❌ GeckoTerminal返回null');
         }
       }
 
