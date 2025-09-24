@@ -184,6 +184,27 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
       }
     }
 
+    // 对于 GeckoTerminal 代币，尝试从地址获取图标
+    if (crypto.id.startsWith('gt-')) {
+      const parts = crypto.id.split('-');
+      if (parts.length >= 3) {
+        const chainId = parts[1];
+        const tokenAddress = parts.slice(2).join('-');
+
+        let iconUrl = '';
+        if (chainId === 'bsc') {
+          iconUrl = `https://tokens.pancakeswap.finance/images/${tokenAddress}.png`;
+        } else if (chainId === 'ethereum') {
+          iconUrl = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${tokenAddress}/logo.png`;
+        }
+
+        if (iconUrl) {
+          console.log(`✅ 使用 GeckoTerminal 代币图标: ${iconUrl}`);
+          return iconUrl;
+        }
+      }
+    }
+
     // 最后使用占位符
     const placeholderUrl = `https://via.placeholder.com/40x40/6366f1/ffffff?text=${crypto.symbol.charAt(0)}`;
     console.log(`⚠️ 使用占位符图标: ${placeholderUrl}`);
@@ -290,7 +311,7 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
               console.log(`❌ 图标加载失败: ${currentSrc}`);
 
               // 如果当前是 PancakeSwap 图标失败，尝试 Trust Wallet
-              if (currentSrc.includes('pancakeswap.finance') && crypto.id.startsWith('dex-')) {
+              if (currentSrc.includes('pancakeswap.finance') && (crypto.id.startsWith('dex-') || crypto.id.startsWith('gt-'))) {
                 const parts = crypto.id.split('-');
                 if (parts.length >= 3) {
                   const tokenAddress = parts.slice(2).join('-');

@@ -640,7 +640,7 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
     const cryptoData: CryptoCurrency = {
       id: `dex-${token.address}`,
       symbol: token.symbol?.toUpperCase() || 'UNKNOWN',
-      name: token.name || token.symbol?.toUpperCase() || 'Unknown Token',
+      name: token.name || token.symbol || 'Unknown Token',
       image: pair.info?.imageUrl || '', // 使用DexScreener提供的图标
       current_price: parseFloat(pair.priceUsd) || 0,
       price_change_percentage_24h: parseFloat(pair.priceChange?.h24) || 0,
@@ -1033,7 +1033,7 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
     const cryptoData: CryptoCurrency = {
       id: `gt-${network}-${tokenAddress}`,
       symbol: attributes.symbol?.toUpperCase() || 'UNKNOWN',
-      name: attributes.name || attributes.symbol?.toUpperCase() || 'Unknown Token',
+      name: attributes.name || attributes.symbol || 'Unknown Token',
       image: attributes.image_url || '',
       current_price: parseFloat(attributes.price_usd) || 0,
       price_change_percentage_24h: priceChange24h,
