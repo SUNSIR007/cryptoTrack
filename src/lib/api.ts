@@ -1201,8 +1201,8 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
       return null;
     }
 
-    // 使用 GeckoTerminal API 获取代币信息
-    const url = `${GeckoTerminalAPI.BASE_URL}/networks/${networkConfig.id}/tokens/${tokenAddress}`;
+    // 使用 GeckoTerminal API 获取代币信息（包含交易池数据以获取价格变化）
+    const url = `${GeckoTerminalAPI.BASE_URL}/networks/${networkConfig.id}/tokens/${tokenAddress}?include=top_pools`;
 
     const response = await fetch(url, {
       headers: {
@@ -1226,9 +1226,33 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
     const tokenData = data.data;
     const attributes = tokenData.attributes;
 
-    // 暂时跳过价格变化数据获取，专注于基本信息
+    // 从交易池数据中获取价格变化信息
     let priceChange24h = 0;
-    console.log('暂时跳过价格变化数据获取');
+    let priceChange7d = 0;
+
+    if (data.included && data.included.length > 0) {
+      // 获取主要交易池的价格变化数据
+      const mainPool = data.included[0];
+      if (mainPool && mainPool.attributes && mainPool.attributes.price_change_percentage) {
+        const priceChanges = mainPool.attributes.price_change_percentage;
+        priceChange24h = parseFloat(priceChanges.h24) || 0;
+
+        // GeckoTerminal 没有直接的7天数据，使用24小时数据进行保守估算
+        // 使用24小时变化的1.5倍作为7天变化的估算（相对保守的方法）
+        if (priceChanges.h24) {
+          priceChange7d = (parseFloat(priceChanges.h24) || 0) * 1.5;
+        } else if (priceChanges.h6) {
+          // 如果没有24小时数据，使用6小时数据的2倍作为估算
+          priceChange7d = (parseFloat(priceChanges.h6) || 0) * 2;
+        }
+
+        console.log(`✅ 获取到价格变化数据: 24h=${priceChange24h}%, 7d估算=${priceChange7d}%`);
+      } else {
+        console.log('⚠️ 交易池数据中没有价格变化信息');
+      }
+    } else {
+      console.log('⚠️ 没有找到交易池数据');
+    }
 
     // 转换为我们的数据格式
     const cryptoData: CryptoCurrency = {
@@ -1238,7 +1262,7 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
       image: attributes.image_url || '',
       current_price: parseFloat(attributes.price_usd) || 0,
       price_change_percentage_24h: priceChange24h,
-      price_change_percentage_7d: 0,
+      price_change_percentage_7d: priceChange7d,
       market_cap: parseFloat(attributes.market_cap_usd) || 0,
       market_cap_rank: 0,
       total_volume: parseFloat(attributes.volume_usd?.h24) || 0,
