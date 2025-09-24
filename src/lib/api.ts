@@ -756,6 +756,11 @@ async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurr
   try {
     console.log(`📡 尝试从 DexScreener 获取代币信息: ${tokenAddress}`);
 
+    // 清除可能的缓存（用于调试）
+    const cacheKey = `dexscreener-token-${tokenAddress}`;
+    apiCache.delete(cacheKey);
+    console.log(`🗑️ 清除缓存: ${cacheKey}`);
+
     // DexScreener API 端点
     const url = `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`;
 
@@ -811,29 +816,46 @@ async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurr
     // 尝试获取代币图标
     let tokenImage = '';
     try {
-      const symbol = tokenInfo.symbol?.toLowerCase();
-      if (symbol) {
-        // 确保地址格式正确（校验和格式）
-        const checksumAddress = tokenAddress; // 保持原始地址格式
+      // 优先使用 DexScreener 提供的图标
+      if (bestPair.info?.imageUrl) {
+        tokenImage = bestPair.info.imageUrl;
+        console.log(`✅ 使用 DexScreener 官方图标: ${tokenImage}`);
+      } else {
+        // 备用图标源
+        const symbol = tokenInfo.symbol?.toLowerCase();
+        if (symbol) {
+          // 确保地址格式正确（校验和格式）
+          const checksumAddress = tokenAddress; // 保持原始地址格式
 
-        if (bestPair.chainId === 'bsc') {
-          // BSC 代币图标源优先级
-          // 1. PancakeSwap (使用原始地址)
-          tokenImage = `https://tokens.pancakeswap.finance/images/${checksumAddress}.png`;
-          console.log(`🔍 BSC 代币图标 URL: ${tokenImage}`);
-        } else if (bestPair.chainId === 'ethereum') {
-          // Ethereum 代币使用 Trust Wallet
-          tokenImage = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${checksumAddress}/logo.png`;
-          console.log(`🔍 ETH 代币图标 URL: ${tokenImage}`);
-        } else {
-          // 其他链使用通用占位符
-          tokenImage = `https://via.placeholder.com/40x40/3B82F6/FFFFFF?text=${symbol.charAt(0).toUpperCase()}`;
-          console.log(`🔍 其他链占位符图标: ${tokenImage}`);
+          if (bestPair.chainId === 'bsc') {
+            // BSC 代币图标源优先级
+            // 1. PancakeSwap (使用原始地址)
+            tokenImage = `https://tokens.pancakeswap.finance/images/${checksumAddress}.png`;
+            console.log(`🔍 BSC 代币图标 URL: ${tokenImage}`);
+          } else if (bestPair.chainId === 'ethereum') {
+            // Ethereum 代币使用 Trust Wallet
+            tokenImage = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${checksumAddress}/logo.png`;
+            console.log(`🔍 ETH 代币图标 URL: ${tokenImage}`);
+          } else {
+            // 其他链使用通用占位符
+            tokenImage = `https://via.placeholder.com/40x40/3B82F6/FFFFFF?text=${symbol.charAt(0).toUpperCase()}`;
+            console.log(`🔍 其他链占位符图标: ${tokenImage}`);
+          }
         }
       }
     } catch (error) {
       console.log('获取代币图标失败:', error);
     }
+
+    // 调试输出
+    console.log('🔍 DexScreener 代币信息调试:', {
+      tokenAddress,
+      tokenInfo,
+      symbol: tokenInfo.symbol,
+      name: tokenInfo.name,
+      symbolUpperCase: tokenInfo.symbol?.toUpperCase(),
+      bestPair: bestPair
+    });
 
     const cryptoData: CryptoCurrency = {
       id: `dex-${bestPair.chainId}-${tokenAddress.toLowerCase()}`,
