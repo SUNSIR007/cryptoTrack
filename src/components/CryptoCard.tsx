@@ -11,25 +11,40 @@ import { isDefaultCoin } from '../lib/userCoins';
 
 // 获取代币网络信息
 function getTokenNetworkInfo(crypto: any): { network: string; networkName: string; color: string } | null {
-  // 检查是否有DexScreener数据（通常是Solana）
+  // 检查是否有DexScreener数据
   if (crypto.dexscreener_data?.chainId) {
     const chainId = crypto.dexscreener_data.chainId;
     if (chainId === 'solana') {
       return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
+    } else if (chainId === 'bsc') {
+      return { network: 'BSC', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
+    } else if (chainId === 'ethereum') {
+      return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
     }
   }
 
-  // 检查ID前缀
+  // 检查ID前缀 - DexScreener 代币
+  if (crypto.id.startsWith('dex-')) {
+    const parts = crypto.id.split('-');
+    if (parts.length >= 2) {
+      const chainId = parts[1];
+      if (chainId === 'bsc') {
+        return { network: 'BSC', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
+      } else if (chainId === 'ethereum') {
+        return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
+      } else if (chainId === 'solana') {
+        return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
+      }
+    }
+  }
+
+  // 检查ID前缀 - GeckoTerminal 代币
   if (crypto.id.startsWith('gt-bsc-')) {
     return { network: 'BSC', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
   }
 
   if (crypto.id.startsWith('gt-eth-')) {
     return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
-  }
-
-  if (crypto.id.startsWith('dex-') || crypto.id.includes('solana')) {
-    return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
   }
 
   // 默认主流币种
@@ -52,7 +67,7 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
 
     setChartLoading(true);
     try {
-      const history = await fetchPriceHistory(crypto.id, parseInt(period));
+      const history = await fetchPriceHistory(crypto.id, parseInt(period), crypto.current_price);
       setPriceHistory(history);
     } catch (error) {
       console.error('Failed to load price history:', error);
@@ -123,7 +138,7 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
   // 获取币种图标URL
   const getIconUrl = () => {
     // 优先使用API返回的图标
-    if (crypto.image) {
+    if (crypto.image && crypto.image.trim() !== '') {
       return crypto.image;
     }
 
@@ -135,7 +150,28 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
       binancecoin: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png'
     };
 
-    return iconMap[crypto.id] || `https://via.placeholder.com/40x40/6366f1/ffffff?text=${crypto.symbol.charAt(0)}`;
+    // 如果是已知的主流币种，使用映射
+    if (iconMap[crypto.id]) {
+      return iconMap[crypto.id];
+    }
+
+    // 对于 DexScreener 代币，尝试从地址获取图标
+    if (crypto.id.startsWith('dex-')) {
+      const parts = crypto.id.split('-');
+      if (parts.length >= 3) {
+        const chainId = parts[1];
+        const tokenAddress = parts.slice(2).join('-');
+
+        if (chainId === 'bsc') {
+          return `https://tokens.pancakeswap.finance/images/${tokenAddress}.png`;
+        } else if (chainId === 'ethereum') {
+          return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${tokenAddress}/logo.png`;
+        }
+      }
+    }
+
+    // 最后使用占位符
+    return `https://via.placeholder.com/40x40/6366f1/ffffff?text=${crypto.symbol.charAt(0)}`;
   };
 
   return (
@@ -181,39 +217,80 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
             </p>
           </div>
 
-          {/* 币种图标 - 点击跳转到DexScreener */}
+          {/* 币种图标 - 点击跳转到相应页面 */}
           <div
             className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all duration-200"
             onClick={() => {
-              // 构建CoinGecko链接
-              let coinGeckoUrl = '';
+              let targetUrl = '';
+              let siteName = '';
 
-              // 使用币种ID构建CoinGecko链接
-              if (crypto.id) {
-                coinGeckoUrl = `https://www.coingecko.com/en/coins/${crypto.id}`;
+              // 根据代币类型选择跳转目标
+              if (crypto.id.startsWith('dex-')) {
+                // DexScreener 代币跳转到 DexScreener
+                const parts = crypto.id.split('-');
+                if (parts.length >= 3) {
+                  const chainId = parts[1];
+                  const tokenAddress = parts.slice(2).join('-');
+                  targetUrl = `https://dexscreener.com/${chainId}/${tokenAddress}`;
+                  siteName = 'DexScreener';
+                }
+              } else if (crypto.id.startsWith('manual-') || crypto.id.startsWith('gt-')) {
+                // 手动添加的代币或 GeckoTerminal 代币，尝试跳转到 DexScreener
+                if (crypto.dexscreener_data?.pairAddress) {
+                  const chainId = crypto.dexscreener_data.chainId || 'bsc';
+                  targetUrl = `https://dexscreener.com/${chainId}/${crypto.dexscreener_data.pairAddress}`;
+                  siteName = 'DexScreener';
+                } else {
+                  // 备用：跳转到 CoinGecko
+                  const coinName = crypto.name.toLowerCase().replace(/\s+/g, '-');
+                  targetUrl = `https://www.coingecko.com/en/coins/${coinName}`;
+                  siteName = 'CoinGecko';
+                }
               } else {
-                // 如果没有ID，使用币种名称的小写形式
-                const coinName = crypto.name.toLowerCase().replace(/\s+/g, '-');
-                coinGeckoUrl = `https://www.coingecko.com/en/coins/${coinName}`;
+                // 主流币种跳转到 CoinGecko
+                targetUrl = `https://www.coingecko.com/en/coins/${crypto.id}`;
+                siteName = 'CoinGecko';
               }
 
-              if (coinGeckoUrl) {
-                window.open(coinGeckoUrl, '_blank', 'noopener,noreferrer');
+              if (targetUrl) {
+                window.open(targetUrl, '_blank', 'noopener,noreferrer');
               }
             }}
-            title={`在CoinGecko上查看 ${crypto.name}`}
+            title={`查看 ${crypto.name} 详情`}
           >
           <img
             src={getIconUrl()}
             alt={crypto.name}
             className="w-10 h-10 object-cover rounded-full"
             onError={(e) => {
-              // 如果图片加载失败，显示首字母
+              // 如果图片加载失败，尝试备用图标
               const target = e.target as HTMLImageElement;
+              const currentSrc = target.src;
+
+              // 如果当前是 PancakeSwap 图标失败，尝试 Trust Wallet
+              if (currentSrc.includes('pancakeswap.finance') && crypto.id.startsWith('dex-')) {
+                const parts = crypto.id.split('-');
+                if (parts.length >= 3) {
+                  const tokenAddress = parts.slice(2).join('-');
+                  target.src = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/assets/${tokenAddress}/logo.png`;
+                  return;
+                }
+              }
+
+              // 如果是 Trust Wallet 图标失败，尝试通用占位符
+              if (currentSrc.includes('trustwallet') || currentSrc.includes('github.com')) {
+                target.src = `https://via.placeholder.com/40x40/6366f1/ffffff?text=${crypto.symbol.charAt(0)}`;
+                return;
+              }
+
+              // 最终失败，显示首字母
               target.style.display = 'none';
               const parent = target.parentElement;
-              if (parent) {
-                parent.innerHTML = `<span class="text-gray-600 dark:text-gray-300 font-bold text-sm">${crypto.symbol.charAt(0)}</span>`;
+              if (parent && !parent.querySelector('span')) {
+                const span = document.createElement('span');
+                span.className = 'text-gray-600 dark:text-gray-300 font-bold text-sm';
+                span.textContent = crypto.symbol.charAt(0);
+                parent.appendChild(span);
               }
             }}
           />

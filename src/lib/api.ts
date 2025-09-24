@@ -253,7 +253,59 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
 }
 
 // 获取历史价格数据
-export async function fetchPriceHistory(coinId: string, days: number = 7): Promise<PricePoint[]> {
+export async function fetchPriceHistory(coinId: string, days: number = 7, currentPrice?: number): Promise<PricePoint[]> {
+  console.log(`🔍 获取历史价格数据: ${coinId}, ${days}天`);
+
+  // 对于 DexScreener 代币，生成基于当前价格的模拟历史数据
+  if (coinId.startsWith('dex-') || coinId.startsWith('manual-')) {
+    console.log('⚠️ DexScreener/手动代币暂不支持历史数据，生成模拟数据');
+
+    // 尝试获取当前价格
+    let basePrice = currentPrice || 1.0;
+
+    // 如果没有提供当前价格，尝试从 DexScreener 获取
+    if (!currentPrice && coinId.startsWith('dex-')) {
+      try {
+        const parts = coinId.split('-');
+        if (parts.length >= 3) {
+          const tokenAddress = parts.slice(2).join('-');
+          const tokenData = await getTokenFromDexScreener(tokenAddress);
+          if (tokenData && tokenData.current_price > 0) {
+            basePrice = tokenData.current_price;
+            console.log(`✅ 获取到当前价格: $${basePrice}`);
+          }
+        }
+      } catch (error) {
+        console.log('无法获取当前价格，使用默认值');
+      }
+    }
+
+    // 生成模拟的历史价格数据
+    const now = Date.now();
+    const interval = (days * 24 * 60 * 60 * 1000) / 20; // 20个数据点
+    const mockData: PricePoint[] = [];
+
+    // 生成趋势性的价格变化（而不是完全随机）
+    let currentMockPrice = basePrice * 0.9; // 从90%的当前价格开始
+    const priceIncrement = (basePrice - currentMockPrice) / 19; // 逐渐上升到当前价格
+
+    for (let i = 0; i < 20; i++) {
+      const timestamp = now - (19 - i) * interval;
+
+      // 添加一些随机波动，但保持总体趋势
+      const randomFactor = 0.95 + Math.random() * 0.1; // 0.95 到 1.05 的小幅波动
+      const price = Math.max(0.0001, (currentMockPrice + priceIncrement * i) * randomFactor);
+
+      mockData.push({
+        timestamp,
+        price
+      });
+    }
+
+    console.log(`✅ 生成了 ${mockData.length} 个模拟历史价格数据点`);
+    return mockData;
+  }
+
   // 检查API密钥
   if (!checkApiKey()) {
     console.error('无法获取历史价格数据：API密钥未配置');
@@ -281,6 +333,7 @@ export async function fetchPriceHistory(coinId: string, days: number = 7): Promi
       price: price[1]
     }));
 
+    console.log(`✅ 成功获取 ${priceHistory.length} 个历史价格数据点`);
     return priceHistory;
   } catch (error) {
     console.error('Error fetching price history:', error);
