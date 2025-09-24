@@ -113,58 +113,32 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
         // 清除相关的搜索缓存以确保获取最新结果
         apiCache.clearByPrefix(`search-${query.toLowerCase()}`);
 
-        // 检测是否是代币地址
-        const addressInfo = detectTokenAddressType(query.trim());
+        // 如果不是地址，按名称搜索
+        // 首先尝试多链搜索（包括BSC）
+        let searchResults = await searchMultiChainTokens(query);
+        console.log(`多链搜索 "${query}" 的结果:`, searchResults);
 
-        if (addressInfo.isValid) {
-          // 如果是地址，直接尝试获取代币信息
-          console.log(`检测到${addressInfo.networkName}代币地址，直接搜索...`);
-          const tokenData = await searchAndGetTokenPrice(query.trim());
-
-          if (tokenData) {
-            // 如果找到代币信息，转换为搜索结果格式
-            searchResults = [{
-              id: `dex-${addressInfo.network}-${query.toLowerCase()}`,
-              name: tokenData.name || tokenData.symbol || 'Unknown Token',
-              symbol: tokenData.symbol || 'UNKNOWN',
-              thumb: tokenData.image || '',
-              market_cap_rank: 0
-            }];
-            console.log('地址搜索成功:', searchResults);
-          } else {
-            // 地址搜索失败，设置特殊错误信息
-            console.log('地址搜索失败');
-            setError(`无法找到地址 ${query} 的代币信息。该地址可能无效或代币未被收录。`);
-            searchResults = [];
+        // 如果多链搜索没有结果，尝试新币种搜索
+        if (searchResults.length === 0) {
+          console.log('多链搜索无结果，尝试新币种搜索...');
+          const newCoinResults = await searchNewCoins(query);
+          if (newCoinResults.length > 0) {
+            searchResults = newCoinResults;
+            console.log('新币种搜索结果:', newCoinResults);
           }
-        } else {
-          // 如果不是地址，按名称搜索
-          // 首先尝试多链搜索（包括BSC）
-          searchResults = await searchMultiChainTokens(query);
-          console.log(`多链搜索 "${query}" 的结果:`, searchResults);
+        }
 
-          // 如果多链搜索没有结果，尝试新币种搜索
-          if (searchResults.length === 0) {
-            console.log('多链搜索无结果，尝试新币种搜索...');
-            const newCoinResults = await searchNewCoins(query);
-            if (newCoinResults.length > 0) {
-              searchResults = newCoinResults;
-              console.log('新币种搜索结果:', newCoinResults);
-            }
-          }
-
-          // 如果还是没有结果，显示meme币建议
-          if (searchResults.length === 0) {
-            const suggestions = getMemeCoinSuggestions(query);
-            if (suggestions.length > 0) {
-              searchResults = suggestions;
-              setShowSuggestions(true);
-            } else {
-              setShowSuggestions(false);
-            }
+        // 如果还是没有结果，显示meme币建议
+        if (searchResults.length === 0) {
+          const suggestions = getMemeCoinSuggestions(query);
+          if (suggestions.length > 0) {
+            searchResults = suggestions;
+            setShowSuggestions(true);
           } else {
             setShowSuggestions(false);
           }
+        } else {
+          setShowSuggestions(false);
         }
 
         setResults(searchResults);
