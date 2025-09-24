@@ -47,13 +47,41 @@ function getTokenNetworkInfo(crypto: any): { network: string; networkName: strin
     return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
   }
 
-  // 默认主流币种
-  const mainnetTokens = ['bitcoin', 'ethereum', 'binancecoin', 'solana'];
-  if (mainnetTokens.includes(crypto.id)) {
-    return null; // 主流币种不显示网络标签
+  // 主流币种的网络标识
+  if (crypto.id === 'bitcoin') {
+    return { network: 'BTC', networkName: 'Bitcoin', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' };
+  }
+  if (crypto.id === 'ethereum') {
+    return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
+  }
+  if (crypto.id === 'binancecoin') {
+    return { network: 'BNB', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
+  }
+  if (crypto.id === 'solana') {
+    return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
   }
 
-  return null;
+  // 其他常见主流币种
+  const networkMap: { [key: string]: { network: string; networkName: string; color: string } } = {
+    'cardano': { network: 'ADA', networkName: 'Cardano', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+    'avalanche-2': { network: 'AVAX', networkName: 'Avalanche', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
+    'polygon': { network: 'MATIC', networkName: 'Polygon', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
+    'chainlink': { network: 'LINK', networkName: 'Chainlink', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+    'polkadot': { network: 'DOT', networkName: 'Polkadot', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300' },
+    'uniswap': { network: 'UNI', networkName: 'Uniswap', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300' },
+    'litecoin': { network: 'LTC', networkName: 'Litecoin', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' },
+    'bitcoin-cash': { network: 'BCH', networkName: 'Bitcoin Cash', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+    'stellar': { network: 'XLM', networkName: 'Stellar', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+    'dogecoin': { network: 'DOGE', networkName: 'Dogecoin', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+    'shiba-inu': { network: 'SHIB', networkName: 'Shiba Inu', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' }
+  };
+
+  if (networkMap[crypto.id]) {
+    return networkMap[crypto.id];
+  }
+
+  // 默认返回通用标识
+  return { network: 'CRYPTO', networkName: 'Cryptocurrency', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' };
 }
 
 const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemove, showRemoveButton = true }: CryptoCardProps) {
@@ -232,11 +260,6 @@ const CryptoCard = memo(function CryptoCard({ crypto, isLoading = false, onRemov
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 {crypto.symbol}
               </h3>
-              {crypto.market_cap_rank > 0 && (
-                <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full">
-                  #{crypto.market_cap_rank}
-                </span>
-              )}
               {(() => {
                 const networkInfo = getTokenNetworkInfo(crypto);
                 return networkInfo ? (
