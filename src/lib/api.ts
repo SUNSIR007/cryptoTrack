@@ -781,6 +781,22 @@ function isSolanaTokenAddress(input: string): boolean {
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(input);
 }
 
+// 标准化EVM地址（补充前导零）
+function normalizeEVMAddress(address: string): string {
+  if (!address.startsWith('0x')) {
+    return address;
+  }
+
+  // 如果地址长度不足42个字符，补充前导零
+  if (address.length < 42) {
+    const hexPart = address.slice(2);
+    const paddedHex = hexPart.padStart(40, '0');
+    return '0x' + paddedHex;
+  }
+
+  return address;
+}
+
 // 检测代币地址所属的网络
 function detectTokenNetwork(address: string): string | null {
   // Solana 地址有独特的格式，可以直接识别
@@ -788,9 +804,12 @@ function detectTokenNetwork(address: string): string | null {
     return 'solana';
   }
 
-  // EVM 地址格式相同，无法直接区分 BSC 和 Ethereum
+  // 标准化EVM地址
+  const normalizedAddress = normalizeEVMAddress(address);
+
+  // EVM 地址格式相同，无法直接区分 BSC、Ethereum、OKX 等
   // 返回 'evm' 表示需要进一步检测
-  if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
+  if (/^0x[a-fA-F0-9]{40}$/.test(normalizedAddress)) {
     return 'evm';
   }
 
@@ -1212,11 +1231,16 @@ export async function searchAndGetTokenPrice(tokenNameOrAddress: string): Promis
           return priceData;
         }
       } else if (detectedNetwork === 'evm') {
+        // 标准化EVM地址
+        const normalizedAddress = normalizeEVMAddress(input);
         console.log(`🔍 检测到 EVM 代币地址: ${input}`);
+        if (normalizedAddress !== input) {
+          console.log(`📝 地址已标准化: ${normalizedAddress}`);
+        }
 
         // EVM地址使用DexScreener API，它能自动识别具体的链
         console.log('📡 尝试从DexScreener获取EVM代币信息...');
-        const priceData = await getTokenFromDexScreener(input);
+        const priceData = await getTokenFromDexScreener(normalizedAddress);
         if (priceData) {
           console.log('✅ DexScreener获取成功:', priceData);
           return priceData;
@@ -1224,21 +1248,21 @@ export async function searchAndGetTokenPrice(tokenNameOrAddress: string): Promis
 
         // 如果DexScreener失败，尝试GeckoTerminal（按流行度顺序：BSC、Ethereum、OKX）
         console.log('❌ DexScreener失败，尝试GeckoTerminal BSC...');
-        let geckoData = await getTokenPriceFromGeckoTerminal(input, 'bsc');
+        let geckoData = await getTokenPriceFromGeckoTerminal(normalizedAddress, 'bsc');
         if (geckoData) {
           console.log('✅ GeckoTerminal BSC获取成功:', geckoData);
           return geckoData;
         }
 
         console.log('❌ GeckoTerminal BSC失败，尝试Ethereum...');
-        geckoData = await getTokenPriceFromGeckoTerminal(input, 'ethereum');
+        geckoData = await getTokenPriceFromGeckoTerminal(normalizedAddress, 'ethereum');
         if (geckoData) {
           console.log('✅ GeckoTerminal Ethereum获取成功:', geckoData);
           return geckoData;
         }
 
         console.log('❌ GeckoTerminal Ethereum失败，尝试OKX链...');
-        geckoData = await getTokenPriceFromGeckoTerminal(input, 'okx');
+        geckoData = await getTokenPriceFromGeckoTerminal(normalizedAddress, 'okx');
         if (geckoData) {
           console.log('✅ GeckoTerminal OKX获取成功:', geckoData);
           return geckoData;
