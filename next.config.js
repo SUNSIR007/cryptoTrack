@@ -2,7 +2,7 @@
 const nextConfig = {
   // App directory is now stable in Next.js 14
   images: {
-    domains: ['assets.coingecko.com'],
+    domains: ['assets.coingecko.com', 'coin-images.coingecko.com'],
   },
   // 安全头部配置
   async headers() {
@@ -28,7 +28,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://api.coingecko.com https://api.dexscreener.com https://price.jup.ag https://public-api.birdeye.so; frame-ancestors 'none'; object-src 'none'; base-uri 'self';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://api.coingecko.com https://api.dexscreener.com https://api.geckoterminal.com https://price.jup.ag https://public-api.birdeye.so; frame-ancestors 'none'; object-src 'none'; base-uri 'self';",
           },
           {
             key: 'Permissions-Policy',
