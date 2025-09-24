@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>调试添加按钮</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .search-result {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            background: #f9f9f9;
+        }
+        .token-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .token-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #ddd;
+        }
+        .add-button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .add-button:hover {
+            background: #1976d2;
+        }
+        .result {
+            background: #f5f5f5;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        .success {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
+        }
+        .error {
+            background: #ffeaea;
+            border-left: 4px solid #f44336;
+        }
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 调试添加按钮功能</h1>
+        <p>模拟搜索结果中的添加按钮点击事件</p>
+        
+        <!-- 模拟搜索结果 -->
+        <div class="search-result">
+            <div class="token-info">
+                <img src="https://coin-images.coingecko.com/coins/images/68279/large/xdog.png?1755236450" 
+                     alt="XDOG" class="token-icon" />
+                <div>
+                    <div><strong>XDOG</strong></div>
+                    <div style="font-size: 12px; color: #666;">XDOG</div>
+                </div>
+            </div>
+            <button class="add-button" onclick="testAddButton('gt-okx-0x0cc24c51bf89c00c5affbfcf5e856c25ecbdb48e')">
+                + 添加
+            </button>
+        </div>
+        
+        <button onclick="clearResults()" style="margin-top: 12px; padding: 8px 16px; background: #666; color: white; border: none; border-radius: 4px;">
+            清空结果
+        </button>
+    </div>
+
+    <div class="container">
+        <h2>📊 测试结果</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function testAddButton(coinId) {
+            addResult(`🔍 点击添加按钮，代币ID: ${coinId}`, 'info');
+            
+            // 模拟 handleAddCoin 函数
+            handleAddCoin(coinId);
+        }
+        
+        function handleAddCoin(coinId) {
+            addResult(`🏠 主页面收到添加代币请求，ID: ${coinId}`, 'info');
+            
+            // 模拟 addUserCoin 函数
+            const result = mockAddUserCoin(coinId);
+            addResult(`🏠 addUserCoin 结果: ${JSON.stringify(result)}`, result.success ? 'success' : 'error');
+            
+            if (result.success) {
+                addResult('✅ 代币添加成功，更新用户币种列表', 'success');
+                addResult(`📋 当前用户币种: ${JSON.stringify(result.coins)}`, 'info');
+            } else {
+                addResult(`❌ 代币添加失败: ${result.error}`, 'error');
+            }
+        }
+        
+        function mockAddUserCoin(coinId) {
+            // 模拟获取当前币种列表
+            const currentCoins = ['bitcoin', 'ethereum', 'binancecoin', 'solana'];
+            
+            addResult(`📋 当前币种列表: ${JSON.stringify(currentCoins)}`, 'info');
+            
+            // 检查是否已存在
+            if (currentCoins.includes(coinId)) {
+                return { success: true, coins: currentCoins };
+            }
+            
+            // 检查数量限制（最大50个）
+            if (currentCoins.length >= 50) {
+                return {
+                    success: false,
+                    coins: currentCoins,
+                    error: '已达到最大代币数量限制 (50个)。请删除一些代币后再添加新的。'
+                };
+            }
+            
+            // 添加新币种
+            const newCoins = [...currentCoins, coinId];
+            addResult(`💾 保存新的币种列表: ${JSON.stringify(newCoins)}`, 'info');
+            
+            return { success: true, coins: newCoins };
+        }
+
+        function addResult(message, type, data = null) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            
+            let content = `<div><strong>${new Date().toLocaleTimeString()}</strong>: ${message}</div>`;
+            
+            if (data) {
+                content += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            }
+            
+            resultDiv.innerHTML = content;
+            resultsDiv.appendChild(resultDiv);
+            
+            // 滚动到底部
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // 页面加载完成后的提示
+        window.onload = function() {
+            addResult('✅ 添加按钮调试页面已就绪', 'success');
+        };
+    </script>
+</body>
+</html>

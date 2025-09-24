@@ -94,10 +94,11 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
     coinIds = Object.values(SUPPORTED_CRYPTO_IDS);
   }
 
-  // 分离手动添加的币种、DexScreener币种和正常币种
+  // 分离手动添加的币种、DexScreener币种、GeckoTerminal币种和正常币种
   const manualCoins = coinIds.filter(id => id.startsWith('manual-'));
   const dexCoins = coinIds.filter(id => id.startsWith('dex-'));
-  const normalCoins = coinIds.filter(id => !id.startsWith('manual-') && !id.startsWith('dex-'));
+  const gtCoins = coinIds.filter(id => id.startsWith('gt-'));
+  const normalCoins = coinIds.filter(id => !id.startsWith('manual-') && !id.startsWith('dex-') && !id.startsWith('gt-'));
 
   const results: CryptoCurrency[] = [];
 
@@ -258,6 +259,56 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
 
     const dexData = await Promise.all(dexDataPromises);
     results.push(...dexData);
+  }
+
+  // 处理 GeckoTerminal 币种 (gt-network-address)
+  if (gtCoins.length > 0) {
+    const gtDataPromises = gtCoins.map(async (coinId) => {
+      try {
+        // 从 ID 中提取网络和地址: gt-okx-0x123... -> network: okx, address: 0x123...
+        const parts = coinId.split('-');
+        if (parts.length >= 3) {
+          const network = parts[1]; // okx, bsc, ethereum, etc.
+          const tokenAddress = parts.slice(2).join('-'); // 处理地址中可能包含 '-' 的情况
+
+          console.log(`🔍 获取 GeckoTerminal 代币数据: ${coinId} -> ${network}:${tokenAddress}`);
+
+          // 使用 GeckoTerminal API 获取最新数据
+          const gtData = await getTokenPriceFromGeckoTerminal(tokenAddress, network);
+          if (gtData) {
+            console.log(`✅ 成功获取 GeckoTerminal 数据: ${gtData.name}`);
+            return {
+              ...gtData,
+              id: coinId, // 保持原始ID
+            };
+          }
+        }
+      } catch (error) {
+        console.log(`❌ 无法获取 GeckoTerminal 代币 ${coinId} 的数据:`, error);
+      }
+
+      // 如果获取失败，返回占位数据
+      return {
+        id: coinId,
+        symbol: 'UNKNOWN',
+        name: 'Unknown Token',
+        image: '',
+        current_price: 0,
+        price_change_percentage_24h: 0,
+        price_change_percentage_7d: 0,
+        market_cap: 0,
+        market_cap_rank: 0,
+        total_volume: 0,
+        high_24h: 0,
+        low_24h: 0,
+        circulating_supply: 0,
+        total_supply: 0,
+        last_updated: new Date().toISOString(),
+      };
+    });
+
+    const gtData = await Promise.all(gtDataPromises);
+    results.push(...gtData);
   }
 
   return results;
