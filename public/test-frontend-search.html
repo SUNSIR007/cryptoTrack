@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试前端搜索逻辑</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 12px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        .result {
+            background: #f5f5f5;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        .success {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
+        }
+        .error {
+            background: #ffeaea;
+            border-left: 4px solid #f44336;
+        }
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 测试前端搜索逻辑</h1>
+        <p>模拟 CoinSearch.tsx 组件的搜索逻辑</p>
+        
+        <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="输入代币地址或名称" 
+            value="0x0cc24c51bf89c00c5affbfcf5e856c25ecbdb48e"
+        />
+        
+        <button onclick="testFrontendSearch()">测试前端搜索</button>
+        <button onclick="clearResults()">清空结果</button>
+    </div>
+
+    <div class="container">
+        <h2>📊 测试结果</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // 模拟前端搜索逻辑
+        function normalizeEVMAddress(address) {
+            if (!address.startsWith('0x')) {
+                return address;
+            }
+            if (address.length < 42) {
+                const hexPart = address.slice(2);
+                const paddedHex = hexPart.padStart(40, '0');
+                return '0x' + paddedHex;
+            }
+            return address;
+        }
+
+        function detectTokenAddressType(address) {
+            // Solana地址
+            if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
+                return { isValid: true, network: 'solana', networkName: 'Solana' };
+            }
+
+            // 标准化EVM地址
+            const normalizedAddress = normalizeEVMAddress(address);
+
+            // EVM地址（以太坊、BSC、OKX等）
+            if (/^0x[a-fA-F0-9]{40}$/.test(normalizedAddress)) {
+                return { isValid: true, network: 'evm', networkName: 'EVM (Ethereum/BSC/OKX)' };
+            }
+
+            return { isValid: false };
+        }
+
+        async function searchAndGetTokenPrice(input) {
+            try {
+                const response = await fetch('/api/test-search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: input })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.success ? data.data : null;
+            } catch (error) {
+                console.error('API调用失败:', error);
+                return null;
+            }
+        }
+
+        async function testFrontendSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            
+            if (!query) {
+                addResult('请输入搜索内容', 'error');
+                return;
+            }
+
+            addResult(`开始测试前端搜索逻辑: ${query}`, 'info');
+
+            try {
+                // 1. 检测代币地址类型
+                const addressInfo = detectTokenAddressType(query);
+                addResult(`地址检测结果: ${JSON.stringify(addressInfo)}`, 'info');
+
+                if (addressInfo.isValid) {
+                    addResult(`检测到${addressInfo.networkName}代币地址，尝试获取代币信息...`, 'info');
+
+                    // 2. 标准化地址
+                    const normalizedQuery = addressInfo.network === 'evm' ? normalizeEVMAddress(query) : query;
+                    addResult(`标准化地址: ${normalizedQuery}`, 'info');
+
+                    // 3. 尝试获取代币信息
+                    addResult(`调用 searchAndGetTokenPrice(${normalizedQuery})`, 'info');
+                    const tokenData = await searchAndGetTokenPrice(normalizedQuery);
+                    addResult(`API返回结果: ${tokenData ? '成功' : '失败'}`, tokenData ? 'success' : 'error');
+
+                    if (tokenData) {
+                        // 4. 将代币数据转换为搜索结果格式
+                        const tokenName = tokenData.name || tokenData.symbol || 'Unknown Token';
+                        const tokenResult = {
+                            id: tokenData.id,
+                            name: tokenName,
+                            symbol: tokenData.symbol || 'UNKNOWN',
+                            thumb: tokenData.image || '',
+                            market_cap_rank: tokenData.market_cap_rank || 0
+                        };
+
+                        addResult('✅ 成功获取代币信息并转换格式', 'success', tokenResult);
+                        addResult('✅ 前端搜索逻辑测试通过！', 'success');
+                    } else {
+                        addResult('❌ 无法获取代币信息', 'error');
+                    }
+                } else {
+                    addResult('❌ 地址格式无效', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ 测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        function addResult(message, type, data = null) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            
+            let content = `<div><strong>${new Date().toLocaleTimeString()}</strong>: ${message}</div>`;
+            
+            if (data) {
+                content += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            }
+            
+            resultDiv.innerHTML = content;
+            resultsDiv.appendChild(resultDiv);
+            
+            // 滚动到底部
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // 页面加载完成后的提示
+        window.onload = function() {
+            addResult('✅ 前端搜索逻辑测试页面已就绪', 'success');
+        };
+    </script>
+</body>
+</html>

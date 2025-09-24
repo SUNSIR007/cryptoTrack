@@ -221,10 +221,10 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
 
     try {
       // 检测代币地址类型
-      const addressInfo = detectTokenAddressType(query.trim());
+      const manualAddressInfo = detectTokenAddressType(query.trim());
 
-      if (addressInfo.isValid) {
-        console.log(`检测到${addressInfo.networkName}代币地址，尝试获取代币信息...`);
+      if (manualAddressInfo.isValid) {
+        console.log(`检测到${manualAddressInfo.networkName}代币地址，尝试获取代币信息...`);
 
         // 尝试获取代币信息
         const tokenData = await searchAndGetTokenPrice(query.trim());
