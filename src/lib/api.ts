@@ -838,7 +838,7 @@ async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurr
     const cryptoData: CryptoCurrency = {
       id: `dex-${bestPair.chainId}-${tokenAddress.toLowerCase()}`,
       symbol: tokenInfo.symbol?.toUpperCase() || 'UNKNOWN',
-      name: tokenInfo.name || tokenInfo.symbol?.toUpperCase() || 'Unknown Token',
+      name: tokenInfo.name || tokenInfo.symbol || 'Unknown Token',
       image: tokenImage,
       current_price: parseFloat(bestPair.priceUsd) || 0,
       price_change_percentage_24h: parseFloat(bestPair.priceChange?.h24) || 0,
