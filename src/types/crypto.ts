@@ -14,6 +14,10 @@ export interface CryptoCurrency {
   circulating_supply: number;
   total_supply: number;
   last_updated: string;
+  // 平台信息（从CoinGecko获取）
+  platforms?: {
+    [key: string]: string; // 平台名称 -> 合约地址
+  };
   // DexScreener特有数据（可选）
   dexscreener_data?: {
     pairAddress?: string;

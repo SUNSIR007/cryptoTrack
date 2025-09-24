@@ -11,7 +11,35 @@ import { isDefaultCoin } from '../lib/userCoins';
 
 // 获取代币网络信息
 function getTokenNetworkInfo(crypto: any): { network: string; networkName: string; color: string } | null {
-  // 检查是否有DexScreener数据
+  // 1. 优先检查 CoinGecko 平台信息
+  if (crypto.platforms && typeof crypto.platforms === 'object') {
+    const platforms = crypto.platforms;
+
+    // 检查各个平台，按优先级排序
+    if (platforms['ethereum'] || platforms['ethereum-classic']) {
+      return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
+    }
+    if (platforms['binance-smart-chain'] || platforms['bsc']) {
+      return { network: 'BSC', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
+    }
+    if (platforms['solana']) {
+      return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
+    }
+    if (platforms['polygon-pos']) {
+      return { network: 'MATIC', networkName: 'Polygon', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
+    }
+    if (platforms['avalanche']) {
+      return { network: 'AVAX', networkName: 'Avalanche', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' };
+    }
+    if (platforms['arbitrum-one']) {
+      return { network: 'ARB', networkName: 'Arbitrum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
+    }
+    if (platforms['optimistic-ethereum']) {
+      return { network: 'OP', networkName: 'Optimism', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' };
+    }
+  }
+
+  // 2. 检查是否有DexScreener数据
   if (crypto.dexscreener_data?.chainId) {
     const chainId = crypto.dexscreener_data.chainId;
     if (chainId === 'solana') {
@@ -23,7 +51,7 @@ function getTokenNetworkInfo(crypto: any): { network: string; networkName: strin
     }
   }
 
-  // 检查ID前缀 - DexScreener 代币
+  // 3. 检查ID前缀 - DexScreener 代币
   if (crypto.id.startsWith('dex-')) {
     const parts = crypto.id.split('-');
     if (parts.length >= 2) {
@@ -38,7 +66,7 @@ function getTokenNetworkInfo(crypto: any): { network: string; networkName: strin
     }
   }
 
-  // 检查ID前缀 - GeckoTerminal 代币
+  // 4. 检查ID前缀 - GeckoTerminal 代币
   if (crypto.id.startsWith('gt-bsc-')) {
     return { network: 'BSC', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
   }
@@ -47,43 +75,42 @@ function getTokenNetworkInfo(crypto: any): { network: string; networkName: strin
     return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
   }
 
-  // 主流币种的网络标识
-  if (crypto.id === 'bitcoin') {
-    return { network: 'BTC', networkName: 'Bitcoin', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' };
-  }
-  if (crypto.id === 'ethereum') {
-    return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
-  }
-  if (crypto.id === 'binancecoin') {
-    return { network: 'BNB', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
-  }
-  if (crypto.id === 'solana') {
-    return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
-  }
-
-  // 其他常见主流币种
-  const networkMap: { [key: string]: { network: string; networkName: string; color: string } } = {
+  // 5. 原生区块链代币（Layer 1）
+  const nativeTokens: { [key: string]: { network: string; networkName: string; color: string } } = {
+    'bitcoin': { network: 'BTC', networkName: 'Bitcoin', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
+    'ethereum': { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+    'binancecoin': { network: 'BNB', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+    'solana': { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
     'cardano': { network: 'ADA', networkName: 'Cardano', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
     'avalanche-2': { network: 'AVAX', networkName: 'Avalanche', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
     'polygon': { network: 'MATIC', networkName: 'Polygon', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
-    'chainlink': { network: 'LINK', networkName: 'Chainlink', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
     'polkadot': { network: 'DOT', networkName: 'Polkadot', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300' },
-    'uniswap': { network: 'UNI', networkName: 'Uniswap', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300' },
     'litecoin': { network: 'LTC', networkName: 'Litecoin', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' },
     'bitcoin-cash': { network: 'BCH', networkName: 'Bitcoin Cash', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
     'stellar': { network: 'XLM', networkName: 'Stellar', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
     'dogecoin': { network: 'DOGE', networkName: 'Dogecoin', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
-    'shiba-inu': { network: 'SHIB', networkName: 'Shiba Inu', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
-    // 特定代币的网络识别
-    'world-liberty-financial-wlfi': { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
-    'v2ex': { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' }
   };
 
-  if (networkMap[crypto.id]) {
-    return networkMap[crypto.id];
+  if (nativeTokens[crypto.id]) {
+    return nativeTokens[crypto.id];
   }
 
-  // 默认返回通用标识
+  // 6. 基于代币名称的智能推断（作为最后的备选方案）
+  const symbolLower = crypto.symbol?.toLowerCase() || '';
+  const nameLower = crypto.name?.toLowerCase() || '';
+
+  // 检查是否包含网络相关关键词
+  if (nameLower.includes('ethereum') || nameLower.includes('erc-20') || nameLower.includes('erc20')) {
+    return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
+  }
+  if (nameLower.includes('binance') || nameLower.includes('bsc') || nameLower.includes('bep-20') || nameLower.includes('bep20')) {
+    return { network: 'BSC', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
+  }
+  if (nameLower.includes('solana') || nameLower.includes('spl')) {
+    return { network: 'SOL', networkName: 'Solana', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' };
+  }
+
+  // 7. 默认返回通用标识
   return { network: 'CRYPTO', networkName: 'Cryptocurrency', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' };
 }
 

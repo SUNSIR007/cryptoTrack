@@ -122,8 +122,11 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
 
           const data = await response.json();
 
-          // 转换数据格式
-          const cryptos: CryptoCurrency[] = data.map((coin: any) => {
+          // 转换数据格式，并异步获取平台信息
+          const cryptos: CryptoCurrency[] = await Promise.all(data.map(async (coin: any) => {
+            // 获取详细信息以获取平台数据
+            const details = await fetchCoinDetails(coin.id);
+
             return {
               id: coin.id,
               symbol: coin.symbol.toUpperCase(),
@@ -140,8 +143,9 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
               circulating_supply: coin.circulating_supply || 0,
               total_supply: coin.total_supply || 0,
               last_updated: coin.last_updated || new Date().toISOString(),
+              platforms: details?.platforms || {},
             };
-          });
+          }));
 
           // 缓存结果
           apiCache.set(cacheKey, cryptos, 2 * 60 * 1000); // 缓存2分钟
@@ -250,6 +254,46 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
   }
 
   return results;
+}
+
+// 获取代币详细信息（包含平台信息）
+export async function fetchCoinDetails(coinId: string): Promise<any> {
+  if (!checkApiKey()) {
+    return null;
+  }
+
+  const cacheKey = `coin-details-${coinId}`;
+
+  // 检查缓存
+  const cachedData = apiCache.get<any>(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
+  try {
+    const url = `${CryptoTrackAPI.BASE_URL}/coins/${coinId}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false&x_cg_demo_api_key=${CryptoTrackAPI.API_KEY}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.log(`获取代币详情失败: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+
+    // 缓存结果（较长时间，因为平台信息不经常变化）
+    apiCache.set(cacheKey, data, 60 * 60 * 1000); // 1小时缓存
+
+    return data;
+  } catch (error) {
+    console.error('获取代币详情失败:', error);
+    return null;
+  }
 }
 
 // 获取历史价格数据
