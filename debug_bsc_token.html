@@ -64,8 +64,14 @@
     </div>
 
     <div class="container">
+        <h2>测试 DexScreener API</h2>
+        <button onclick="testDexScreenerAPI()">测试 DexScreener API</button>
+        <div id="dexResult" class="result"></div>
+    </div>
+
+    <div class="container">
         <h2>测试 GeckoTerminal API</h2>
-        <button onclick="testGeckoTerminalAPI()">测试 API 调用</button>
+        <button onclick="testGeckoTerminalAPI()">测试 GeckoTerminal API</button>
         <div id="apiResult" class="result"></div>
     </div>
 
@@ -97,11 +103,17 @@
 
         // 检测代币地址所属的网络
         function detectTokenNetwork(address) {
-            for (const [networkKey, network] of Object.entries(SUPPORTED_NETWORKS)) {
-                if (network.address_pattern.test(address)) {
-                    return networkKey;
-                }
+            // Solana 地址有独特的格式，可以直接识别
+            if (SUPPORTED_NETWORKS.solana.address_pattern.test(address)) {
+                return 'solana';
             }
+
+            // EVM 地址格式相同，无法直接区分 BSC 和 Ethereum
+            // 返回 'evm' 表示需要进一步检测
+            if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
+                return 'evm';
+            }
+
             return null;
         }
 
@@ -115,17 +127,89 @@
             const detectedNetwork = detectTokenNetwork(address);
             
             if (detectedNetwork) {
-                const networkInfo = SUPPORTED_NETWORKS[detectedNetwork];
-                result.className = 'result success';
-                result.textContent = `✅ 检测成功！
+                if (detectedNetwork === 'evm') {
+                    result.className = 'result success';
+                    result.textContent = `✅ 检测成功！
+地址: ${address}
+网络: EVM 兼容链 (需要进一步检测具体链)
+类型: ${detectedNetwork}`;
+                    console.log('✅ 地址检测成功: EVM 地址');
+                } else {
+                    const networkInfo = SUPPORTED_NETWORKS[detectedNetwork];
+                    result.className = 'result success';
+                    result.textContent = `✅ 检测成功！
 地址: ${address}
 网络: ${networkInfo.name} (${detectedNetwork})
 网络ID: ${networkInfo.id}`;
-                console.log('✅ 地址检测成功:', detectedNetwork);
+                    console.log('✅ 地址检测成功:', detectedNetwork);
+                }
             } else {
                 result.className = 'result error';
                 result.textContent = `❌ 无法识别地址格式: ${address}`;
                 console.log('❌ 地址检测失败');
+            }
+        }
+
+        // 测试 DexScreener API
+        async function testDexScreenerAPI() {
+            const address = document.getElementById('addressInput').value.trim();
+            const result = document.getElementById('dexResult');
+
+            result.className = 'result info';
+            result.textContent = '🔄 正在测试 DexScreener API...';
+
+            try {
+                const url = `https://api.dexscreener.com/latest/dex/tokens/${address}`;
+                console.log('📡 DexScreener API URL:', url);
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'CryptoTrack/1.0'
+                    }
+                });
+
+                console.log('📡 DexScreener API 响应状态:', response.status);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📡 DexScreener API 响应数据:', data);
+
+                    if (!data.pairs || data.pairs.length === 0) {
+                        result.className = 'result error';
+                        result.textContent = '❌ DexScreener 未找到交易对';
+                        return;
+                    }
+
+                    // 选择流动性最高的交易对
+                    const bestPair = data.pairs.reduce((best, current) => {
+                        const bestLiquidity = parseFloat(best.liquidity?.usd || '0');
+                        const currentLiquidity = parseFloat(current.liquidity?.usd || '0');
+                        return currentLiquidity > bestLiquidity ? current : best;
+                    });
+
+                    const tokenInfo = bestPair.baseToken.address.toLowerCase() === address.toLowerCase()
+                        ? bestPair.baseToken
+                        : bestPair.quoteToken;
+
+                    result.className = 'result success';
+                    result.textContent = `✅ DexScreener API 调用成功！
+链: ${bestPair.chainId}
+代币名称: ${tokenInfo.name}
+代币符号: ${tokenInfo.symbol}
+当前价格: $${bestPair.priceUsd}
+24h变化: ${bestPair.priceChange?.h24}%
+流动性: $${bestPair.liquidity?.usd}
+交易对: ${bestPair.pairAddress}
+DEX: ${bestPair.dexId}`;
+                } else {
+                    result.className = 'result error';
+                    result.textContent = `❌ DexScreener API 调用失败: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error('❌ DexScreener API 测试失败:', error);
+                result.className = 'result error';
+                result.textContent = `❌ DexScreener API 测试失败: ${error.message}`;
             }
         }
 
@@ -188,51 +272,67 @@
                 }
                 console.log('✅ 步骤1: 地址检测成功 -', detectedNetwork);
                 
-                // 步骤2: API 调用
-                const networkConfig = SUPPORTED_NETWORKS[detectedNetwork];
-                const url = `https://api.geckoterminal.com/api/v2/networks/${networkConfig.id}/tokens/${address}`;
-                
+                // 步骤2: API 调用 (使用 DexScreener)
+                const url = `https://api.dexscreener.com/latest/dex/tokens/${address}`;
+
                 const response = await fetch(url, {
-                    headers: { 'Accept': 'application/json' }
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'CryptoTrack/1.0'
+                    }
                 });
-                
+
                 if (!response.ok) {
-                    throw new Error(`API 响应错误: ${response.status}`);
+                    throw new Error(`DexScreener API 响应错误: ${response.status}`);
                 }
-                console.log('✅ 步骤2: API 调用成功');
-                
+                console.log('✅ 步骤2: DexScreener API 调用成功');
+
                 // 步骤3: 数据解析
                 const data = await response.json();
-                if (!data.data) {
-                    throw new Error('API 返回数据为空');
+                if (!data.pairs || data.pairs.length === 0) {
+                    throw new Error('DexScreener 未找到交易对');
                 }
                 console.log('✅ 步骤3: 数据解析成功');
-                
-                // 步骤4: 数据转换
-                const attributes = data.data.attributes;
+
+                // 步骤4: 选择最佳交易对
+                const bestPair = data.pairs.reduce((best, current) => {
+                    const bestLiquidity = parseFloat(best.liquidity?.usd || '0');
+                    const currentLiquidity = parseFloat(current.liquidity?.usd || '0');
+                    return currentLiquidity > bestLiquidity ? current : best;
+                });
+                console.log('✅ 步骤4: 选择最佳交易对成功');
+
+                // 步骤5: 数据转换
+                const tokenInfo = bestPair.baseToken.address.toLowerCase() === address.toLowerCase()
+                    ? bestPair.baseToken
+                    : bestPair.quoteToken;
+
                 const cryptoData = {
-                    id: `gt-${detectedNetwork}-${address}`,
-                    symbol: attributes.symbol?.toUpperCase() || 'UNKNOWN',
-                    name: attributes.name || attributes.symbol?.toUpperCase() || 'Unknown Token',
-                    image: attributes.image_url || '',
-                    current_price: parseFloat(attributes.price_usd) || 0,
-                    price_change_percentage_24h: 0,
-                    market_cap: parseFloat(attributes.market_cap_usd) || 0,
-                    total_volume: parseFloat(attributes.volume_usd?.h24) || 0,
+                    id: `dex-${bestPair.chainId}-${address.toLowerCase()}`,
+                    symbol: tokenInfo.symbol?.toUpperCase() || 'UNKNOWN',
+                    name: tokenInfo.name || tokenInfo.symbol?.toUpperCase() || 'Unknown Token',
+                    image: '',
+                    current_price: parseFloat(bestPair.priceUsd) || 0,
+                    price_change_percentage_24h: parseFloat(bestPair.priceChange?.h24) || 0,
+                    market_cap: parseFloat(bestPair.marketCap) || 0,
+                    total_volume: parseFloat(bestPair.volume?.h24) || 0,
+                    chainId: bestPair.chainId
                 };
-                console.log('✅ 步骤4: 数据转换成功', cryptoData);
-                
+                console.log('✅ 步骤5: 数据转换成功', cryptoData);
+
                 result.className = 'result success';
                 result.textContent = `✅ 完整流程测试成功！
 
-检测到的网络: ${networkConfig.name}
+检测到的链: ${bestPair.chainId.toUpperCase()}
 代币信息:
 - ID: ${cryptoData.id}
 - 名称: ${cryptoData.name}
 - 符号: ${cryptoData.symbol}
 - 价格: $${cryptoData.current_price}
+- 24h变化: ${cryptoData.price_change_percentage_24h}%
 - 市值: $${cryptoData.market_cap}
 - 24h交易量: $${cryptoData.total_volume}
+- 流动性: $${bestPair.liquidity?.usd}
 
 这个数据应该能够在搜索结果中正确显示！`;
                 

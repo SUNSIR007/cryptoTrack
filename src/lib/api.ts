@@ -629,17 +629,118 @@ function isSolanaTokenAddress(input: string): boolean {
 
 // 检测代币地址所属的网络
 function detectTokenNetwork(address: string): string | null {
-  for (const [networkKey, network] of Object.entries(SUPPORTED_NETWORKS)) {
-    if (network.address_pattern.test(address)) {
-      return networkKey;
-    }
+  // Solana 地址有独特的格式，可以直接识别
+  if (SUPPORTED_NETWORKS.solana.address_pattern.test(address)) {
+    return 'solana';
   }
+
+  // EVM 地址格式相同，无法直接区分 BSC 和 Ethereum
+  // 返回 'evm' 表示需要进一步检测
+  if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    return 'evm';
+  }
+
   return null;
 }
 
 // 检查是否为EVM兼容地址（以太坊、BSC等）
 function isEVMTokenAddress(address: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+// 使用 DexScreener API 获取 EVM 代币信息
+async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurrency | null> {
+  try {
+    console.log(`📡 尝试从 DexScreener 获取代币信息: ${tokenAddress}`);
+
+    // DexScreener API 端点
+    const url = `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'CryptoTrack/1.0'
+      }
+    });
+
+    if (!response.ok) {
+      console.log(`❌ DexScreener API 响应错误: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log('📡 DexScreener 响应数据:', data);
+
+    if (!data.pairs || data.pairs.length === 0) {
+      console.log('❌ DexScreener 未找到交易对');
+      return null;
+    }
+
+    // 选择流动性最高的交易对
+    const bestPair = data.pairs.reduce((best: any, current: any) => {
+      const bestLiquidity = parseFloat(best.liquidity?.usd || '0');
+      const currentLiquidity = parseFloat(current.liquidity?.usd || '0');
+      return currentLiquidity > bestLiquidity ? current : best;
+    });
+
+    console.log('📡 选择的最佳交易对:', bestPair);
+
+    // 确定网络
+    let networkName = 'Unknown';
+    let networkId = 'unknown';
+
+    if (bestPair.chainId === 'ethereum') {
+      networkName = 'Ethereum';
+      networkId = 'ethereum';
+    } else if (bestPair.chainId === 'bsc') {
+      networkName = 'BNB Chain';
+      networkId = 'bsc';
+    } else if (bestPair.chainId === 'polygon') {
+      networkName = 'Polygon';
+      networkId = 'polygon';
+    }
+
+    // 构建代币数据
+    const tokenInfo = bestPair.baseToken.address.toLowerCase() === tokenAddress.toLowerCase()
+      ? bestPair.baseToken
+      : bestPair.quoteToken;
+
+    const cryptoData: CryptoCurrency = {
+      id: `dex-${bestPair.chainId}-${tokenAddress.toLowerCase()}`,
+      symbol: tokenInfo.symbol?.toUpperCase() || 'UNKNOWN',
+      name: tokenInfo.name || tokenInfo.symbol?.toUpperCase() || 'Unknown Token',
+      image: '', // DexScreener 不提供代币图标
+      current_price: parseFloat(bestPair.priceUsd) || 0,
+      price_change_percentage_24h: parseFloat(bestPair.priceChange?.h24) || 0,
+      price_change_percentage_7d: parseFloat(bestPair.priceChange?.h6) || 0,
+      market_cap: parseFloat(bestPair.marketCap) || 0,
+      market_cap_rank: 0,
+      total_volume: parseFloat(bestPair.volume?.h24) || 0,
+      high_24h: 0,
+      low_24h: 0,
+      circulating_supply: 0,
+      total_supply: 0,
+      last_updated: new Date().toISOString(),
+      // 添加 DexScreener 特有的数据
+      dexscreener_data: {
+        chainId: bestPair.chainId,
+        pairAddress: bestPair.pairAddress,
+        dexId: bestPair.dexId,
+        info: {
+          imageUrl: '',
+          websites: bestPair.info?.websites || [],
+          socials: bestPair.info?.socials || []
+        }
+      }
+    };
+
+    console.log(`✅ DexScreener 获取成功 (${networkName}):`, cryptoData);
+    return cryptoData;
+
+  } catch (error) {
+    console.error('❌ DexScreener API 调用失败:', error);
+    return null;
+  }
 }
 
 // 搜索多链代币（包括BSC）
@@ -845,10 +946,9 @@ export async function searchAndGetTokenPrice(tokenNameOrAddress: string): Promis
     // 检查是否是代币地址并检测网络
     const detectedNetwork = detectTokenNetwork(input);
     if (detectedNetwork) {
-      console.log(`🔍 检测到${SUPPORTED_NETWORKS[detectedNetwork as keyof typeof SUPPORTED_NETWORKS].name}代币地址: ${input}`);
-
-      // 根据网络类型选择合适的API
       if (detectedNetwork === 'solana') {
+        console.log(`🔍 检测到 Solana 代币地址: ${input}`);
+
         // Solana网络使用现有的DexScreener和Jupiter API
         console.log('📡 尝试从DexScreener获取价格...');
         let priceData = await getTokenPriceFromDexScreener(input);
@@ -863,16 +963,30 @@ export async function searchAndGetTokenPrice(tokenNameOrAddress: string): Promis
           console.log('✅ Jupiter获取成功:', priceData);
           return priceData;
         }
-      } else if (detectedNetwork === 'ethereum' || detectedNetwork === 'bsc') {
-        // EVM网络使用GeckoTerminal API
-        console.log(`📡 尝试从GeckoTerminal获取${SUPPORTED_NETWORKS[detectedNetwork as keyof typeof SUPPORTED_NETWORKS].name}代币价格...`);
-        const priceData = await getTokenPriceFromGeckoTerminal(input, detectedNetwork);
-        console.log('GeckoTerminal返回的数据:', priceData);
+      } else if (detectedNetwork === 'evm') {
+        console.log(`🔍 检测到 EVM 代币地址: ${input}`);
+
+        // EVM地址使用DexScreener API，它能自动识别具体的链
+        console.log('📡 尝试从DexScreener获取EVM代币信息...');
+        const priceData = await getTokenFromDexScreener(input);
         if (priceData) {
-          console.log('✅ GeckoTerminal获取成功:', priceData);
+          console.log('✅ DexScreener获取成功:', priceData);
           return priceData;
-        } else {
-          console.log('❌ GeckoTerminal返回null');
+        }
+
+        // 如果DexScreener失败，尝试GeckoTerminal（先尝试BSC，再尝试Ethereum）
+        console.log('❌ DexScreener失败，尝试GeckoTerminal BSC...');
+        let geckoData = await getTokenPriceFromGeckoTerminal(input, 'bsc');
+        if (geckoData) {
+          console.log('✅ GeckoTerminal BSC获取成功:', geckoData);
+          return geckoData;
+        }
+
+        console.log('❌ GeckoTerminal BSC失败，尝试Ethereum...');
+        geckoData = await getTokenPriceFromGeckoTerminal(input, 'ethereum');
+        if (geckoData) {
+          console.log('✅ GeckoTerminal Ethereum获取成功:', geckoData);
+          return geckoData;
         }
       }
 
