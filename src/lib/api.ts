@@ -874,27 +874,55 @@ async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurr
       isQuoteToken: bestPair.quoteToken.address.toLowerCase() === tokenAddress.toLowerCase()
     });
 
+    // 计算流通供应量
+    // 如果有 marketCap 和 price，可以计算流通供应量
+    const currentPrice = parseFloat(bestPair.priceUsd) || 0;
+    const marketCap = parseFloat(bestPair.marketCap) || 0;
+    const fdv = parseFloat(bestPair.fdv) || 0;
+
+    let circulatingSupply = 0;
+    let totalSupply = 0;
+
+    if (currentPrice > 0) {
+      if (marketCap > 0) {
+        circulatingSupply = marketCap / currentPrice;
+      }
+      if (fdv > 0) {
+        totalSupply = fdv / currentPrice;
+      }
+    }
+
+    console.log('🔍 供应量计算:', {
+      currentPrice,
+      marketCap,
+      fdv,
+      circulatingSupply,
+      totalSupply
+    });
+
     const cryptoData: CryptoCurrency = {
       id: `dex-${bestPair.chainId}-${tokenAddress.toLowerCase()}`,
       symbol: tokenInfo.symbol?.toUpperCase() || 'UNKNOWN',
       name: tokenInfo.name || tokenInfo.symbol || 'Unknown Token',
       image: tokenImage,
-      current_price: parseFloat(bestPair.priceUsd) || 0,
+      current_price: currentPrice,
       price_change_percentage_24h: parseFloat(bestPair.priceChange?.h24) || 0,
       price_change_percentage_7d: parseFloat(bestPair.priceChange?.h6) || 0,
-      market_cap: parseFloat(bestPair.marketCap) || 0,
+      market_cap: marketCap,
       market_cap_rank: 0,
       total_volume: parseFloat(bestPair.volume?.h24) || 0,
       high_24h: 0,
       low_24h: 0,
-      circulating_supply: 0,
-      total_supply: 0,
+      circulating_supply: circulatingSupply,
+      total_supply: totalSupply,
       last_updated: new Date().toISOString(),
       // 添加 DexScreener 特有的数据
       dexscreener_data: {
         chainId: bestPair.chainId,
         pairAddress: bestPair.pairAddress,
         dexId: bestPair.dexId,
+        fdv: fdv,
+        liquidity: parseFloat(bestPair.liquidity?.usd) || 0,
         info: {
           imageUrl: '',
           websites: bestPair.info?.websites || [],
