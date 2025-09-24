@@ -7,9 +7,9 @@ const DEFAULT_COINS = ['bitcoin', 'ethereum', 'binancecoin', 'solana'];
 
 // 代币数量限制配置
 export const COIN_LIMITS = {
-  MAX_COINS: 20, // 最大代币数量
-  WARNING_THRESHOLD: 15, // 警告阈值
-  PERFORMANCE_THRESHOLD: 10 // 性能建议阈值
+  MAX_COINS: 50, // 最大代币数量
+  WARNING_THRESHOLD: 40, // 警告阈值
+  PERFORMANCE_THRESHOLD: 30 // 性能建议阈值
 };
 
 // 获取用户币种列表
