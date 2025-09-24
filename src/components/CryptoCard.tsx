@@ -74,8 +74,12 @@ function getTokenNetworkInfo(crypto: any): { network: string; networkName: strin
     return { network: 'BSC', networkName: 'BNB Chain', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' };
   }
 
-  if (crypto.id.startsWith('gt-eth-')) {
+  if (crypto.id.startsWith('gt-eth-') || crypto.id.startsWith('gt-ethereum-')) {
     return { network: 'ETH', networkName: 'Ethereum', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' };
+  }
+
+  if (crypto.id.startsWith('gt-okx-') || crypto.id.startsWith('gt-x-layer-')) {
+    return { network: 'OKX', networkName: 'X Layer (OKX)', color: 'bg-black text-white dark:bg-gray-800 dark:text-gray-200' };
   }
 
   // 5. 原生区块链代币（Layer 1）

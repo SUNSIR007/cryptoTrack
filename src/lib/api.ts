@@ -358,23 +358,36 @@ export async function fetchCoinDetails(coinId: string): Promise<any> {
 export async function fetchPriceHistory(coinId: string, days: number = 7, currentPrice?: number): Promise<PricePoint[]> {
   console.log(`🔍 获取历史价格数据: ${coinId}, ${days}天`);
 
-  // 对于 DexScreener 代币，生成基于当前价格的模拟历史数据
-  if (coinId.startsWith('dex-') || coinId.startsWith('manual-')) {
-    console.log('⚠️ DexScreener/手动代币暂不支持历史数据，生成模拟数据');
+  // 对于 DexScreener、GeckoTerminal 和手动代币，生成基于当前价格的模拟历史数据
+  if (coinId.startsWith('dex-') || coinId.startsWith('manual-') || coinId.startsWith('gt-')) {
+    console.log('⚠️ DexScreener/GeckoTerminal/手动代币暂不支持历史数据，生成模拟数据');
 
     // 尝试获取当前价格
     let basePrice = currentPrice || 1.0;
 
-    // 如果没有提供当前价格，尝试从 DexScreener 获取
-    if (!currentPrice && coinId.startsWith('dex-')) {
+    // 如果没有提供当前价格，尝试从相应的API获取
+    if (!currentPrice) {
       try {
-        const parts = coinId.split('-');
-        if (parts.length >= 3) {
-          const tokenAddress = parts.slice(2).join('-');
-          const tokenData = await getTokenFromDexScreener(tokenAddress);
-          if (tokenData && tokenData.current_price > 0) {
-            basePrice = tokenData.current_price;
-            console.log(`✅ 获取到当前价格: $${basePrice}`);
+        if (coinId.startsWith('dex-')) {
+          const parts = coinId.split('-');
+          if (parts.length >= 3) {
+            const tokenAddress = parts.slice(2).join('-');
+            const tokenData = await getTokenFromDexScreener(tokenAddress);
+            if (tokenData && tokenData.current_price > 0) {
+              basePrice = tokenData.current_price;
+              console.log(`✅ 从DexScreener获取到当前价格: $${basePrice}`);
+            }
+          }
+        } else if (coinId.startsWith('gt-')) {
+          const parts = coinId.split('-');
+          if (parts.length >= 3) {
+            const network = parts[1];
+            const tokenAddress = parts.slice(2).join('-');
+            const tokenData = await getTokenPriceFromGeckoTerminal(tokenAddress, network);
+            if (tokenData && tokenData.current_price > 0) {
+              basePrice = tokenData.current_price;
+              console.log(`✅ 从GeckoTerminal获取到当前价格: $${basePrice}`);
+            }
           }
         }
       } catch (error) {
@@ -1231,7 +1244,7 @@ export async function getTokenPriceFromGeckoTerminal(tokenAddress: string, netwo
       total_volume: parseFloat(attributes.volume_usd?.h24) || 0,
       high_24h: 0,
       low_24h: 0,
-      circulating_supply: 0,
+      circulating_supply: parseFloat(attributes.normalized_total_supply) || 0,
       total_supply: parseFloat(attributes.normalized_total_supply) || parseFloat(attributes.total_supply) || 0,
       last_updated: new Date().toISOString(),
       // 添加GeckoTerminal特有的数据
