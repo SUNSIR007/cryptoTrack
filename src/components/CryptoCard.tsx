@@ -37,6 +37,9 @@ function getTokenNetworkInfo(crypto: any): { network: string; networkName: strin
     if (platforms['optimistic-ethereum']) {
       return { network: 'OP', networkName: 'Optimism', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' };
     }
+    if (platforms['x-layer']) {
+      return { network: 'OKX', networkName: 'X Layer (OKX)', color: 'bg-black text-white dark:bg-gray-800 dark:text-gray-200' };
+    }
   }
 
   // 2. 检查是否有DexScreener数据

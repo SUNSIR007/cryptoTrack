@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络识别测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background: #fafafa;
+        }
+        .test-item.success {
+            border-color: #4caf50;
+            background: #f1f8e9;
+        }
+        .test-item.error {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+        .network-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        .network-eth { background: #e3f2fd; color: #1976d2; }
+        .network-bsc { background: #fff3e0; color: #f57c00; }
+        .network-sol { background: #f3e5f5; color: #7b1fa2; }
+        .network-crypto { background: #f5f5f5; color: #616161; }
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 12px;
+            margin-bottom: 12px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 网络识别系统测试</h1>
+        <p>测试智能网络识别功能，验证各种代币的网络检测是否正确。</p>
+        
+        <button onclick="testSpecificTokens()">测试特定代币</button>
+        <button onclick="testPlatformDetection()">测试平台检测</button>
+        <button onclick="clearResults()">清空结果</button>
+    </div>
+
+    <div class="container">
+        <h2>📊 测试结果</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_KEY = 'CG-your-api-key-here'; // 请替换为实际的API密钥
+        const BASE_URL = 'https://api.coingecko.com/api/v3';
+
+        // 测试特定代币
+        async function testSpecificTokens() {
+            const testTokens = [
+                'world-liberty-financial-wlfi',
+                'pump-fun-token', 
+                'v2ex',
+                'bitcoin',
+                'ethereum',
+                'binancecoin',
+                'solana',
+                'chainlink',
+                'uniswap'
+            ];
+
+            addResult('开始测试特定代币...', 'info');
+
+            for (const tokenId of testTokens) {
+                try {
+                    addResult(`正在测试: ${tokenId}`, 'loading');
+                    
+                    // 获取代币详细信息
+                    const details = await fetchCoinDetails(tokenId);
+                    if (details) {
+                        const networkInfo = detectNetwork(details);
+                        addResult(
+                            `✅ ${tokenId}: ${details.name} (${details.symbol.toUpperCase()})`,
+                            'success',
+                            networkInfo,
+                            details.platforms
+                        );
+                    } else {
+                        addResult(`❌ ${tokenId}: 未找到代币信息`, 'error');
+                    }
+                } catch (error) {
+                    addResult(`❌ ${tokenId}: ${error.message}`, 'error');
+                }
+                
+                // 避免API限制
+                await sleep(200);
+            }
+        }
+
+        // 获取代币详细信息
+        async function fetchCoinDetails(coinId) {
+            const url = `${BASE_URL}/coins/${coinId}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false&x_cg_demo_api_key=${API_KEY}`;
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            return await response.json();
+        }
+
+        // 网络检测逻辑（复制自组件）
+        function detectNetwork(crypto) {
+            // 1. 优先检查 CoinGecko 平台信息
+            if (crypto.platforms && typeof crypto.platforms === 'object') {
+                const platforms = crypto.platforms;
+                
+                if (platforms['ethereum'] || platforms['ethereum-classic']) {
+                    return { network: 'ETH', networkName: 'Ethereum', class: 'network-eth' };
+                }
+                if (platforms['binance-smart-chain'] || platforms['bsc']) {
+                    return { network: 'BSC', networkName: 'BNB Chain', class: 'network-bsc' };
+                }
+                if (platforms['solana']) {
+                    return { network: 'SOL', networkName: 'Solana', class: 'network-sol' };
+                }
+                if (platforms['polygon-pos']) {
+                    return { network: 'MATIC', networkName: 'Polygon', class: 'network-sol' };
+                }
+                if (platforms['avalanche']) {
+                    return { network: 'AVAX', networkName: 'Avalanche', class: 'network-eth' };
+                }
+            }
+
+            // 2. 原生区块链代币
+            const nativeTokens = {
+                'bitcoin': { network: 'BTC', networkName: 'Bitcoin', class: 'network-crypto' },
+                'ethereum': { network: 'ETH', networkName: 'Ethereum', class: 'network-eth' },
+                'binancecoin': { network: 'BNB', networkName: 'BNB Chain', class: 'network-bsc' },
+                'solana': { network: 'SOL', networkName: 'Solana', class: 'network-sol' },
+            };
+
+            if (nativeTokens[crypto.id]) {
+                return nativeTokens[crypto.id];
+            }
+
+            // 3. 默认
+            return { network: 'CRYPTO', networkName: 'Cryptocurrency', class: 'network-crypto' };
+        }
+
+        // 添加测试结果
+        function addResult(message, type, networkInfo = null, platforms = null) {
+            const results = document.getElementById('results');
+            const item = document.createElement('div');
+            item.className = `test-item ${type}`;
+            
+            let content = `<div>${message}`;
+            
+            if (networkInfo) {
+                content += `<span class="network-tag ${networkInfo.class}">${networkInfo.network}</span>`;
+            }
+            
+            content += '</div>';
+            
+            if (platforms) {
+                content += '<pre>' + JSON.stringify(platforms, null, 2) + '</pre>';
+            }
+            
+            item.innerHTML = content;
+            results.appendChild(item);
+            
+            // 滚动到底部
+            item.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 测试平台检测
+        async function testPlatformDetection() {
+            addResult('开始测试平台检测功能...', 'info');
+            
+            // 测试一些已知的多链代币
+            const multiChainTokens = [
+                'tether',      // USDT - 多链
+                'usd-coin',    // USDC - 多链  
+                'chainlink',   // LINK - ETH
+                'uniswap',     // UNI - ETH
+                'pancakeswap-token', // CAKE - BSC
+            ];
+
+            for (const tokenId of multiChainTokens) {
+                try {
+                    const details = await fetchCoinDetails(tokenId);
+                    if (details && details.platforms) {
+                        const platformCount = Object.keys(details.platforms).length;
+                        const networkInfo = detectNetwork(details);
+                        
+                        addResult(
+                            `📊 ${tokenId}: 支持 ${platformCount} 个平台`,
+                            platformCount > 1 ? 'success' : 'info',
+                            networkInfo,
+                            details.platforms
+                        );
+                    }
+                } catch (error) {
+                    addResult(`❌ ${tokenId}: ${error.message}`, 'error');
+                }
+                
+                await sleep(200);
+            }
+        }
+
+        // 清空结果
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // 延迟函数
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // 页面加载完成后的提示
+        window.onload = function() {
+            if (API_KEY === 'CG-your-api-key-here') {
+                addResult('⚠️ 请先在代码中设置正确的 CoinGecko API 密钥', 'error');
+            } else {
+                addResult('✅ 网络识别测试工具已就绪', 'success');
+            }
+        };
+    </script>
+</body>
+</html>

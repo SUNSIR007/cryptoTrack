@@ -74,6 +74,13 @@ const SUPPORTED_NETWORKS = {
     coingecko_id: 'solana',
     address_pattern: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
     native_token: 'solana'
+  },
+  okx: {
+    id: 'x-layer',
+    name: 'X Layer (OKX)',
+    coingecko_id: 'x-layer',
+    address_pattern: /^0x[a-fA-F0-9]{40}$/,
+    native_token: 'okb'
   }
 };
 
@@ -1215,7 +1222,7 @@ export async function searchAndGetTokenPrice(tokenNameOrAddress: string): Promis
           return priceData;
         }
 
-        // 如果DexScreener失败，尝试GeckoTerminal（先尝试BSC，再尝试Ethereum）
+        // 如果DexScreener失败，尝试GeckoTerminal（按流行度顺序：BSC、Ethereum、OKX）
         console.log('❌ DexScreener失败，尝试GeckoTerminal BSC...');
         let geckoData = await getTokenPriceFromGeckoTerminal(input, 'bsc');
         if (geckoData) {
@@ -1227,6 +1234,13 @@ export async function searchAndGetTokenPrice(tokenNameOrAddress: string): Promis
         geckoData = await getTokenPriceFromGeckoTerminal(input, 'ethereum');
         if (geckoData) {
           console.log('✅ GeckoTerminal Ethereum获取成功:', geckoData);
+          return geckoData;
+        }
+
+        console.log('❌ GeckoTerminal Ethereum失败，尝试OKX链...');
+        geckoData = await getTokenPriceFromGeckoTerminal(input, 'okx');
+        if (geckoData) {
+          console.log('✅ GeckoTerminal OKX获取成功:', geckoData);
           return geckoData;
         }
       }
