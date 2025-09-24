@@ -169,12 +169,16 @@ export default function CoinSearch({ onAddCoin, isOpen, onClose }: CoinSearchPro
   }, [isOpen, onClose]);
 
   const handleAddCoin = (coinId: string) => {
+    console.log('🔍 尝试添加代币，ID:', coinId);
+
     // 检查是否是有效的币种ID
     if (!coinId || coinId === '') {
+      console.log('❌ 无效的币种ID');
       setError('无法添加此币种，请尝试其他搜索词');
       return;
     }
 
+    console.log('✅ 调用 onAddCoin，ID:', coinId);
     onAddCoin(coinId);
     setQuery('');
     setResults([]);

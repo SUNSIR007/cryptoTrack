@@ -73,10 +73,16 @@ export default function Home() {
   };
 
   const handleAddCoin = (coinId: string) => {
+    console.log('🏠 主页面收到添加代币请求，ID:', coinId);
+
     const result = addUserCoin(coinId);
+    console.log('🏠 addUserCoin 结果:', result);
+
     if (result.success) {
+      console.log('✅ 代币添加成功，更新用户币种列表');
       setUserCoins(result.coins);
     } else {
+      console.log('❌ 代币添加失败:', result.error);
       // 显示错误信息
       setError(result.error || '添加代币失败');
       // 3秒后清除错误信息

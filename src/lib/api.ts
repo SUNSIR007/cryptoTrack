@@ -87,9 +87,10 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
     coinIds = Object.values(SUPPORTED_CRYPTO_IDS);
   }
 
-  // 分离手动添加的币种和正常币种
+  // 分离手动添加的币种、DexScreener币种和正常币种
   const manualCoins = coinIds.filter(id => id.startsWith('manual-'));
-  const normalCoins = coinIds.filter(id => !id.startsWith('manual-'));
+  const dexCoins = coinIds.filter(id => id.startsWith('dex-'));
+  const normalCoins = coinIds.filter(id => !id.startsWith('manual-') && !id.startsWith('dex-'));
 
   const results: CryptoCurrency[] = [];
 
@@ -197,6 +198,55 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
 
     const manualData = await Promise.all(manualDataPromises);
     results.push(...manualData);
+  }
+
+  // 处理 DexScreener 币种
+  if (dexCoins.length > 0) {
+    const dexDataPromises = dexCoins.map(async (coinId) => {
+      try {
+        // 从 ID 中提取代币地址: dex-bsc-0x123... -> 0x123...
+        const parts = coinId.split('-');
+        if (parts.length >= 3) {
+          const tokenAddress = parts.slice(2).join('-'); // 处理地址中可能包含 '-' 的情况
+
+          console.log(`🔍 获取 DexScreener 代币数据: ${coinId} -> ${tokenAddress}`);
+
+          // 使用 DexScreener API 获取最新数据
+          const dexData = await getTokenFromDexScreener(tokenAddress);
+          if (dexData) {
+            console.log(`✅ 成功获取 DexScreener 数据: ${dexData.name}`);
+            return {
+              ...dexData,
+              id: coinId, // 保持原始ID
+            };
+          }
+        }
+      } catch (error) {
+        console.log(`❌ 无法获取 DexScreener 代币 ${coinId} 的数据:`, error);
+      }
+
+      // 如果获取失败，返回占位数据
+      return {
+        id: coinId,
+        symbol: 'UNKNOWN',
+        name: 'Unknown Token',
+        image: '',
+        current_price: 0,
+        price_change_percentage_24h: 0,
+        price_change_percentage_7d: 0,
+        market_cap: 0,
+        market_cap_rank: 0,
+        total_volume: 0,
+        high_24h: 0,
+        low_24h: 0,
+        circulating_supply: 0,
+        total_supply: 0,
+        last_updated: new Date().toISOString(),
+      };
+    });
+
+    const dexData = await Promise.all(dexDataPromises);
+    results.push(...dexData);
   }
 
   return results;
@@ -705,11 +755,32 @@ async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurr
       ? bestPair.baseToken
       : bestPair.quoteToken;
 
+    // 尝试获取代币图标
+    let tokenImage = '';
+    try {
+      const symbol = tokenInfo.symbol?.toLowerCase();
+      if (symbol) {
+        // 使用多个图标源
+        if (bestPair.chainId === 'bsc') {
+          // BSC 代币尝试使用 BSCScan 或通用图标
+          tokenImage = `https://tokens.pancakeswap.finance/images/${tokenAddress}.png`;
+        } else if (bestPair.chainId === 'ethereum') {
+          // Ethereum 代币使用 Uniswap 或通用图标
+          tokenImage = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${tokenAddress}/logo.png`;
+        } else {
+          // 其他链使用通用占位符
+          tokenImage = `https://via.placeholder.com/40x40/3B82F6/FFFFFF?text=${symbol.charAt(0).toUpperCase()}`;
+        }
+      }
+    } catch (error) {
+      console.log('获取代币图标失败:', error);
+    }
+
     const cryptoData: CryptoCurrency = {
       id: `dex-${bestPair.chainId}-${tokenAddress.toLowerCase()}`,
       symbol: tokenInfo.symbol?.toUpperCase() || 'UNKNOWN',
       name: tokenInfo.name || tokenInfo.symbol?.toUpperCase() || 'Unknown Token',
-      image: '', // DexScreener 不提供代币图标
+      image: tokenImage,
       current_price: parseFloat(bestPair.priceUsd) || 0,
       price_change_percentage_24h: parseFloat(bestPair.priceChange?.h24) || 0,
       price_change_percentage_7d: parseFloat(bestPair.priceChange?.h6) || 0,
