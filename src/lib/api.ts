@@ -220,12 +220,15 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
         // 从 ID 中提取代币地址: dex-bsc-0x123... -> 0x123...
         const parts = coinId.split('-');
         if (parts.length >= 3) {
+          const chainId = parts[1];
           const tokenAddress = parts.slice(2).join('-'); // 处理地址中可能包含 '-' 的情况
 
-          console.log(`🔍 获取 DexScreener 代币数据: ${coinId} -> ${tokenAddress}`);
+          console.log(`🔍 获取 DexScreener 代币数据: ${coinId} -> ${chainId}:${tokenAddress}`);
 
-          // 使用 DexScreener API 获取最新数据
-          const dexData = await getTokenFromDexScreener(tokenAddress);
+          // 使用对应链的 DexScreener API 获取最新数据
+          const dexData = chainId === 'solana'
+            ? await getTokenPriceFromDexScreener(tokenAddress)
+            : await getTokenFromDexScreener(tokenAddress);
           if (dexData) {
             console.log(`✅ 成功获取 DexScreener 数据: ${dexData.name}`);
             return {
@@ -372,11 +375,14 @@ export async function fetchPriceHistory(coinId: string, days: number = 7, curren
         if (coinId.startsWith('dex-')) {
           const parts = coinId.split('-');
           if (parts.length >= 3) {
+            const chainId = parts[1];
             const tokenAddress = parts.slice(2).join('-');
-            const tokenData = await getTokenFromDexScreener(tokenAddress);
+            const tokenData = chainId === 'solana'
+              ? await getTokenPriceFromDexScreener(tokenAddress)
+              : await getTokenFromDexScreener(tokenAddress);
             if (tokenData && tokenData.current_price > 0) {
               basePrice = tokenData.current_price;
-              console.log(`✅ 从DexScreener获取到当前价格: $${basePrice}`);
+              console.log(`✅ 从DexScreener获取到当前价格(${chainId}): $${basePrice}`);
             }
           }
         } else if (coinId.startsWith('gt-')) {
@@ -740,11 +746,12 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
 
     // 取第一个交易对（通常是流动性最好的）
     const pair = data[0];
+    const chainId = pair.chainId || 'solana';
     const token = pair.baseToken;
 
     // 转换为我们的数据格式
     const cryptoData: CryptoCurrency = {
-      id: `dex-${token.address}`,
+      id: `dex-${chainId}-${token.address}`,
       symbol: token.symbol?.toUpperCase() || 'UNKNOWN',
       name: token.name || token.symbol || 'Unknown Token',
       image: pair.info?.imageUrl || '', // 使用DexScreener提供的图标
@@ -771,7 +778,7 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
         volume: pair.volume,
         priceChange: pair.priceChange,
         quoteToken: pair.quoteToken,
-        chainId: pair.chainId,
+        chainId,
         info: pair.info, // 包含图标和其他信息
       }
     };
