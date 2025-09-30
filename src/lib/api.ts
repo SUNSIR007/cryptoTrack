@@ -1,5 +1,6 @@
 import { CryptoCurrency, CoinGeckoResponse, CoinGeckoDetailedResponse, PricePoint, SearchResult } from '../types/crypto';
 import { apiCache, requestDeduplicator } from './apiCache';
+import { currencyManager } from './currency';
 
 // 防止与浏览器扩展冲突
 const CryptoTrackAPI = {
@@ -428,7 +429,8 @@ export async function fetchPriceHistory(coinId: string, days: number = 7, curren
   }
 
   try {
-    const url = `${CryptoTrackAPI.BASE_URL}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=${days <= 1 ? 'hourly' : 'daily'}&x_cg_demo_api_key=${CryptoTrackAPI.API_KEY}`;
+    const activeCurrency = currencyManager.getCurrentCurrency().code || 'usd';
+    const url = `${CryptoTrackAPI.BASE_URL}/coins/${coinId}/market_chart?vs_currency=${activeCurrency}&days=${days}&interval=${days <= 1 ? 'hourly' : 'daily'}&x_cg_demo_api_key=${CryptoTrackAPI.API_KEY}`;
 
     const response = await fetch(url, {
       headers: {
@@ -458,21 +460,13 @@ export async function fetchPriceHistory(coinId: string, days: number = 7, curren
 
 // 格式化价格显示
 export function formatPrice(price: number): string {
-  if (price >= 1) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  } else {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 6,
-    }).format(price);
+  const numericPrice = Number(price);
+
+  if (!Number.isFinite(numericPrice)) {
+    return currencyManager.formatPrice(0);
   }
+
+  return currencyManager.formatPrice(numericPrice);
 }
 
 // 格式化百分比变化
@@ -483,17 +477,14 @@ export function formatPercentage(percentage: number): string {
 
 // 格式化市值和交易量
 export function formatMarketCap(value: number): string {
-  if (value >= 1e12) {
-    return `$${(value / 1e12).toFixed(2)}T`;
-  } else if (value >= 1e9) {
-    return `$${(value / 1e9).toFixed(2)}B`;
-  } else if (value >= 1e6) {
-    return `$${(value / 1e6).toFixed(2)}M`;
-  } else if (value >= 1e3) {
-    return `$${(value / 1e3).toFixed(2)}K`;
-  } else {
-    return `$${value.toFixed(2)}`;
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    const { symbol } = currencyManager.getCurrentCurrency();
+    return `${symbol}0.00`;
   }
+
+  return currencyManager.formatMarketCap(numericValue);
 }
 
 // 格式化供应量

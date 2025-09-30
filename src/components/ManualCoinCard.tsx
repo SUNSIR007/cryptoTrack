@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, RefreshCw, Clock } from 'lucide-react';
 import { CryptoCurrency } from '@/types/crypto';
-import { searchAndGetTokenPrice } from '@/lib/api';
+import { searchAndGetTokenPrice, formatPrice as formatCurrencyPrice, formatMarketCap as formatCurrencyMarketCap } from '@/lib/api';
 
 // 获取代币网络信息
 function getTokenNetworkInfo(crypto: any): { network: string; networkName: string; color: string } | null {
@@ -216,10 +216,18 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
 
 
 
-  const formatPrice = (price: number) => {
-    if (price === 0) return 'N/A';
-    if (price < 0.01) return price.toFixed(6);
-    return price.toFixed(4);
+  const formatDisplayPrice = (price?: number, fallback: string = 'N/A') => {
+    if (!price || price <= 0 || Number.isNaN(price)) {
+      return fallback;
+    }
+    return formatCurrencyPrice(price);
+  };
+
+  const formatDisplayValue = (value?: number) => {
+    if (!value || value <= 0 || Number.isNaN(value)) {
+      return '--';
+    }
+    return formatCurrencyMarketCap(value);
   };
 
   const formatPercentage = (percentage: number) => {
@@ -314,29 +322,29 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
         <div className="mb-4">
           <div className="flex items-baseline space-x-2 mb-1">
             <span className="text-2xl font-bold text-gray-900 dark:text-white">
-              ${hasRealData ? formatPrice(crypto.current_price) : '0.00'}
+              {formatDisplayPrice(hasRealData ? crypto.current_price : undefined)}
             </span>
           </div>
           <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
             <span>高: {(() => {
               // 优先使用标准的24h最高价
               if (hasRealData && crypto.high_24h) {
-                return `$${formatPrice(crypto.high_24h)}`;
+                return formatDisplayPrice(crypto.high_24h, '--');
               }
               // 如果没有24h最高价数据，使用当前价格作为参考
               if (hasRealData && crypto.current_price) {
-                return `$${formatPrice(crypto.current_price)}`;
+                return formatDisplayPrice(crypto.current_price, '--');
               }
               return '--';
             })()}</span>
             <span>低: {(() => {
               // 优先使用标准的24h最低价
               if (hasRealData && crypto.low_24h) {
-                return `$${formatPrice(crypto.low_24h)}`;
+                return formatDisplayPrice(crypto.low_24h, '--');
               }
               // 如果没有24h最低价数据，使用当前价格作为参考
               if (hasRealData && crypto.current_price) {
-                return `$${formatPrice(crypto.current_price)}`;
+                return formatDisplayPrice(crypto.current_price, '--');
               }
               return '--';
             })()}</span>
@@ -386,7 +394,7 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
               {(() => {
                 // 显示流动性而不是7d变化，因为DexScreener通常没有7d数据
                 if (crypto.dexscreener_data?.liquidity && crypto.dexscreener_data.liquidity > 0) {
-                  return `$${(crypto.dexscreener_data.liquidity / 1000).toFixed(0)}K`;
+                  return formatDisplayValue(crypto.dexscreener_data.liquidity);
                 }
                 return '--';
               })()}
@@ -403,11 +411,11 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
                 {(() => {
                   // 优先使用DexScreener的FDV数据
                   if (crypto.dexscreener_data?.fdv && crypto.dexscreener_data.fdv > 0) {
-                    return `$${(crypto.dexscreener_data.fdv / 1000000).toFixed(1)}M`;
+                    return formatDisplayValue(crypto.dexscreener_data.fdv);
                   }
                   // 其次使用market_cap
                   if (crypto.market_cap > 0) {
-                    return `$${(crypto.market_cap / 1000000).toFixed(1)}M`;
+                    return formatDisplayValue(crypto.market_cap);
                   }
                   return '--';
                 })()}
@@ -419,11 +427,11 @@ export default function ManualCoinCard({ crypto, onRemove, onUpdate, showRemoveB
                 {(() => {
                   // 优先使用DexScreener的volume数据
                   if (crypto.dexscreener_data?.volume?.h24 && crypto.dexscreener_data.volume.h24 > 0) {
-                    return `$${(crypto.dexscreener_data.volume.h24 / 1000).toFixed(0)}K`;
+                    return formatDisplayValue(crypto.dexscreener_data.volume.h24);
                   }
                   // 其次使用total_volume
                   if (crypto.total_volume > 0) {
-                    return `$${(crypto.total_volume / 1000000).toFixed(1)}M`;
+                    return formatDisplayValue(crypto.total_volume);
                   }
                   return '--';
                 })()}
