@@ -219,16 +219,27 @@ export async function fetchCryptoPrices(coinIds?: string[], currency: string = '
       try {
         // 从 ID 中提取代币地址: dex-bsc-0x123... -> 0x123...
         const parts = coinId.split('-');
-        if (parts.length >= 3) {
-          const chainId = parts[1];
-          const tokenAddress = parts.slice(2).join('-'); // 处理地址中可能包含 '-' 的情况
+        if (parts.length >= 2) {
+          const chainId = parts.length >= 3 ? parts[1] : '';
+          const tokenAddress = parts.slice(chainId ? 2 : 1).join('-'); // 处理地址中可能包含 '-' 的情况
 
-          console.log(`🔍 获取 DexScreener 代币数据: ${coinId} -> ${chainId}:${tokenAddress}`);
+          console.log(`🔍 获取 DexScreener 代币数据: ${coinId} -> ${chainId || 'auto'}:${tokenAddress}`);
 
           // 使用对应链的 DexScreener API 获取最新数据
-          const dexData = chainId === 'solana'
-            ? await getTokenPriceFromDexScreener(tokenAddress)
-            : await getTokenFromDexScreener(tokenAddress);
+          let dexData: CryptoCurrency | null = null;
+
+          if (chainId === 'solana') {
+            dexData = await getTokenPriceFromDexScreener(tokenAddress);
+          } else if (chainId) {
+            dexData = await getTokenFromDexScreener(tokenAddress);
+          } else {
+            // 自动探测链
+            dexData = await getTokenFromDexScreener(tokenAddress);
+            if (!dexData) {
+              dexData = await getTokenPriceFromDexScreener(tokenAddress);
+            }
+          }
+
           if (dexData) {
             console.log(`✅ 成功获取 DexScreener 数据: ${dexData.name}`);
             return {
@@ -374,15 +385,25 @@ export async function fetchPriceHistory(coinId: string, days: number = 7, curren
       try {
         if (coinId.startsWith('dex-')) {
           const parts = coinId.split('-');
-          if (parts.length >= 3) {
-            const chainId = parts[1];
-            const tokenAddress = parts.slice(2).join('-');
-            const tokenData = chainId === 'solana'
-              ? await getTokenPriceFromDexScreener(tokenAddress)
-              : await getTokenFromDexScreener(tokenAddress);
+          if (parts.length >= 2) {
+            const chainId = parts.length >= 3 ? parts[1] : '';
+            const tokenAddress = parts.slice(chainId ? 2 : 1).join('-');
+            let tokenData: CryptoCurrency | null = null;
+
+            if (chainId === 'solana') {
+              tokenData = await getTokenPriceFromDexScreener(tokenAddress);
+            } else if (chainId) {
+              tokenData = await getTokenFromDexScreener(tokenAddress);
+            } else {
+              tokenData = await getTokenFromDexScreener(tokenAddress);
+              if (!tokenData) {
+                tokenData = await getTokenPriceFromDexScreener(tokenAddress);
+              }
+            }
+
             if (tokenData && tokenData.current_price > 0) {
               basePrice = tokenData.current_price;
-              console.log(`✅ 从DexScreener获取到当前价格(${chainId}): $${basePrice}`);
+              console.log(`✅ 从DexScreener获取到当前价格(${chainId || 'auto'}): $${basePrice}`);
             }
           }
         } else if (coinId.startsWith('gt-')) {
@@ -706,6 +727,152 @@ export async function searchTokenOnDexScreener(query: string): Promise<any[]> {
   }
 }
 
+function normalizeDexAddress(address?: string | null): string {
+  if (!address) {
+    return '';
+  }
+
+  return address.startsWith('0x') ? address.toLowerCase() : address;
+}
+
+function inferChainIdFromDexPair(pair: any, fallbackChainId?: string, tokenAddress?: string): string {
+  if (pair?.chainId) {
+    return String(pair.chainId).toLowerCase();
+  }
+
+  if (typeof pair?.url === 'string') {
+    const match = pair.url.match(/dexscreener\.com\/(\w+)/i);
+    if (match && match[1]) {
+      return match[1].toLowerCase();
+    }
+  }
+
+  if (fallbackChainId) {
+    return fallbackChainId.toLowerCase();
+  }
+
+  // 根据地址形态猜测 Solana
+  if (tokenAddress && isSolanaTokenAddress(tokenAddress)) {
+    return 'solana';
+  }
+
+  return 'unknown';
+}
+
+function buildDexScreenerCryptoData(pair: any, tokenAddress: string, fallbackChainId?: string): CryptoCurrency {
+  const normalizedInputAddress = normalizeDexAddress(tokenAddress);
+  const normalizedBaseAddress = normalizeDexAddress(pair?.baseToken?.address);
+  const normalizedQuoteAddress = normalizeDexAddress(pair?.quoteToken?.address);
+
+  let tokenInfo = pair?.baseToken || {};
+  if (normalizedInputAddress && normalizedInputAddress === normalizedBaseAddress) {
+    tokenInfo = pair.baseToken || {};
+  } else if (normalizedInputAddress && normalizedInputAddress === normalizedQuoteAddress) {
+    tokenInfo = pair.quoteToken || {};
+  }
+
+  const chainId = inferChainIdFromDexPair(pair, fallbackChainId, tokenAddress);
+  const normalizedChainId = chainId === 'unknown' ? '' : chainId;
+
+  // 处理代币图标
+  let tokenImage = pair?.info?.imageUrl || '';
+  const tokenSymbolLower = (typeof tokenInfo?.symbol === 'string'
+    ? tokenInfo.symbol.toLowerCase()
+    : typeof pair?.baseToken?.symbol === 'string'
+    ? pair.baseToken.symbol.toLowerCase()
+    : undefined);
+  const rawAddressForIconValue = typeof (tokenInfo?.address || tokenAddress) === 'string'
+    ? (tokenInfo.address || tokenAddress)
+    : '';
+
+  if (!tokenImage && rawAddressForIconValue.startsWith('0x')) {
+    if (chainId === 'bsc') {
+      tokenImage = `https://tokens.pancakeswap.finance/images/${rawAddressForIconValue}.png`;
+    } else if (chainId === 'ethereum') {
+      tokenImage = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${rawAddressForIconValue}/logo.png`;
+    }
+  }
+
+  if (!tokenImage && tokenSymbolLower) {
+    tokenImage = `https://via.placeholder.com/40x40/3B82F6/FFFFFF?text=${tokenSymbolLower.charAt(0).toUpperCase()}`;
+  }
+
+  const currentPrice = parseFloat(pair?.priceUsd) || 0;
+  const priceChange24h = parseFloat(pair?.priceChange?.h24) || 0;
+  const priceChange7d =
+    parseFloat(pair?.priceChange?.d7) ||
+    parseFloat(pair?.priceChange?.h24) ||
+    parseFloat(pair?.priceChange?.h6) ||
+    0;
+
+  const marketCap = parseFloat(pair?.marketCap) || 0;
+  const fdv = parseFloat(pair?.fdv) || 0;
+  const volume24h = parseFloat(pair?.volume?.h24) || 0;
+
+  let circulatingSupply = 0;
+  let totalSupply = 0;
+
+  if (currentPrice > 0) {
+    if (marketCap > 0) {
+      circulatingSupply = marketCap / currentPrice;
+    }
+    if (fdv > 0) {
+      totalSupply = fdv / currentPrice;
+    }
+  }
+
+  let price24hAgo = currentPrice;
+  if (currentPrice > 0 && priceChange24h > -100) {
+    const changeRatio = 1 + (priceChange24h / 100);
+    if (changeRatio > 0) {
+      price24hAgo = currentPrice / changeRatio;
+    }
+  }
+
+  const high24h = Math.max(currentPrice, price24hAgo);
+  const low24h = Math.min(currentPrice, price24hAgo);
+
+  const idSegments = ['dex'];
+  if (normalizedChainId) {
+    idSegments.push(normalizedChainId);
+  }
+  idSegments.push(normalizeDexAddress(tokenInfo?.address) || normalizedInputAddress);
+
+  const cryptoData: CryptoCurrency = {
+    id: idSegments.join('-'),
+    symbol: tokenInfo?.symbol?.toUpperCase() || pair?.baseToken?.symbol?.toUpperCase() || 'UNKNOWN',
+    name: tokenInfo?.name || tokenInfo?.symbol || pair?.baseToken?.name || pair?.baseToken?.symbol || 'Unknown Token',
+    image: tokenImage,
+    current_price: currentPrice,
+    price_change_percentage_24h: priceChange24h,
+    price_change_percentage_7d: priceChange7d,
+    market_cap: marketCap,
+    market_cap_rank: 0,
+    total_volume: volume24h,
+    high_24h: high24h,
+    low_24h: low24h,
+    circulating_supply: circulatingSupply,
+    total_supply: totalSupply,
+    last_updated: new Date().toISOString(),
+    dexscreener_data: {
+      pairAddress: pair?.pairAddress,
+      dexId: pair?.dexId,
+      url: pair?.url,
+      liquidity: parseFloat(pair?.liquidity?.usd) || 0,
+      fdv,
+      pairCreatedAt: pair?.pairCreatedAt,
+      txns: pair?.txns,
+      volume: pair?.volume,
+      priceChange: pair?.priceChange,
+      quoteToken: pair?.quoteToken,
+      chainId: chainId,
+      info: pair?.info,
+    }
+  };
+
+  return cryptoData;
+}
+
 // 从DexScreener获取代币价格数据
 export async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<CryptoCurrency | null> {
   if (!tokenAddress) {
@@ -720,8 +887,14 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
     return cachedData;
   }
 
+  // 优先尝试通用接口（可识别多链）
+  const generalData = await getTokenFromDexScreener(tokenAddress);
+  if (generalData) {
+    apiCache.set(cacheKey, generalData, 1 * 60 * 1000);
+    return generalData;
+  }
+
   try {
-    // 使用正确的DexScreener API端点 - 新版本API
     const response = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${tokenAddress}`, {
       headers: {
         'Accept': 'application/json',
@@ -737,55 +910,16 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
     const data = await response.json();
     console.log('DexScreener响应数据:', JSON.stringify(data, null, 2));
 
-    // 新API返回的是数组格式
     if (!Array.isArray(data) || data.length === 0) {
       console.log('DexScreener未找到交易对');
       console.log('响应结构:', typeof data, Array.isArray(data) ? `数组长度: ${data.length}` : Object.keys(data));
       return null;
     }
 
-    // 取第一个交易对（通常是流动性最好的）
     const pair = data[0];
-    const chainId = pair.chainId || 'solana';
-    const token = pair.baseToken;
+    const cryptoData = buildDexScreenerCryptoData(pair, tokenAddress, 'solana');
 
-    // 转换为我们的数据格式
-    const cryptoData: CryptoCurrency = {
-      id: `dex-${chainId}-${token.address}`,
-      symbol: token.symbol?.toUpperCase() || 'UNKNOWN',
-      name: token.name || token.symbol || 'Unknown Token',
-      image: pair.info?.imageUrl || '', // 使用DexScreener提供的图标
-      current_price: parseFloat(pair.priceUsd) || 0,
-      price_change_percentage_24h: parseFloat(pair.priceChange?.h24) || 0,
-      price_change_percentage_7d: 0, // DexScreener没有7天数据
-      market_cap: parseFloat(pair.marketCap) || 0,
-      market_cap_rank: 0,
-      total_volume: parseFloat(pair.volume?.h24) || 0,
-      high_24h: 0, // DexScreener API不提供24h最高价，设为0
-      low_24h: 0, // DexScreener API不提供24h最低价，设为0
-      circulating_supply: 0,
-      total_supply: 0,
-      last_updated: new Date().toISOString(),
-      // 添加DexScreener特有的数据
-      dexscreener_data: {
-        pairAddress: pair.pairAddress,
-        dexId: pair.dexId,
-        url: pair.url,
-        liquidity: parseFloat(pair.liquidity?.usd) || 0,
-        fdv: parseFloat(pair.fdv) || 0,
-        pairCreatedAt: pair.pairCreatedAt,
-        txns: pair.txns,
-        volume: pair.volume,
-        priceChange: pair.priceChange,
-        quoteToken: pair.quoteToken,
-        chainId,
-        info: pair.info, // 包含图标和其他信息
-      }
-    };
-
-    // 缓存结果
-    apiCache.set(cacheKey, cryptoData, 1 * 60 * 1000); // 1分钟缓存（更频繁更新）
-
+    apiCache.set(cacheKey, cryptoData, 1 * 60 * 1000);
     return cryptoData;
   } catch (error) {
     console.error('DexScreener价格获取失败:', error);
@@ -924,146 +1058,9 @@ async function getTokenFromDexScreener(tokenAddress: string): Promise<CryptoCurr
     });
 
     console.log('📡 选择的最佳交易对:', bestPair);
+    const cryptoData = buildDexScreenerCryptoData(bestPair, tokenAddress);
 
-    // 确定网络
-    let networkName = 'Unknown';
-    let networkId = 'unknown';
-
-    if (bestPair.chainId === 'ethereum') {
-      networkName = 'Ethereum';
-      networkId = 'ethereum';
-    } else if (bestPair.chainId === 'bsc') {
-      networkName = 'BNB Chain';
-      networkId = 'bsc';
-    } else if (bestPair.chainId === 'polygon') {
-      networkName = 'Polygon';
-      networkId = 'polygon';
-    }
-
-    // 构建代币数据
-    const tokenInfo = bestPair.baseToken.address.toLowerCase() === tokenAddress.toLowerCase()
-      ? bestPair.baseToken
-      : bestPair.quoteToken;
-
-    // 尝试获取代币图标
-    let tokenImage = '';
-    try {
-      // 优先使用 DexScreener 提供的图标
-      if (bestPair.info?.imageUrl) {
-        tokenImage = bestPair.info.imageUrl;
-        console.log(`✅ 使用 DexScreener 官方图标: ${tokenImage}`);
-      } else {
-        // 备用图标源
-        const symbol = tokenInfo.symbol?.toLowerCase();
-        if (symbol) {
-          // 确保地址格式正确（校验和格式）
-          const checksumAddress = tokenAddress; // 保持原始地址格式
-
-          if (bestPair.chainId === 'bsc') {
-            // BSC 代币图标源优先级
-            // 1. PancakeSwap (使用原始地址)
-            tokenImage = `https://tokens.pancakeswap.finance/images/${checksumAddress}.png`;
-            console.log(`🔍 BSC 代币图标 URL: ${tokenImage}`);
-          } else if (bestPair.chainId === 'ethereum') {
-            // Ethereum 代币使用 Trust Wallet
-            tokenImage = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${checksumAddress}/logo.png`;
-            console.log(`🔍 ETH 代币图标 URL: ${tokenImage}`);
-          } else {
-            // 其他链使用通用占位符
-            tokenImage = `https://via.placeholder.com/40x40/3B82F6/FFFFFF?text=${symbol.charAt(0).toUpperCase()}`;
-            console.log(`🔍 其他链占位符图标: ${tokenImage}`);
-          }
-        }
-      }
-    } catch (error) {
-      console.log('获取代币图标失败:', error);
-    }
-
-    // 详细调试输出
-    console.log('🔍 DexScreener 代币信息调试:', {
-      tokenAddress,
-      tokenInfo,
-      symbol: tokenInfo.symbol,
-      symbolType: typeof tokenInfo.symbol,
-      symbolLength: tokenInfo.symbol?.length,
-      symbolCharCodes: tokenInfo.symbol ? [...tokenInfo.symbol].map(c => c.charCodeAt(0)) : [],
-      name: tokenInfo.name,
-      symbolUpperCase: tokenInfo.symbol?.toUpperCase(),
-      bestPair: {
-        chainId: bestPair.chainId,
-        pairAddress: bestPair.pairAddress,
-        baseToken: bestPair.baseToken,
-        quoteToken: bestPair.quoteToken
-      }
-    });
-
-    // 检查是否是 baseToken 还是 quoteToken
-    console.log('🔍 代币匹配检查:', {
-      inputAddress: tokenAddress.toLowerCase(),
-      baseTokenAddress: bestPair.baseToken.address.toLowerCase(),
-      quoteTokenAddress: bestPair.quoteToken.address.toLowerCase(),
-      isBaseToken: bestPair.baseToken.address.toLowerCase() === tokenAddress.toLowerCase(),
-      isQuoteToken: bestPair.quoteToken.address.toLowerCase() === tokenAddress.toLowerCase()
-    });
-
-    // 计算流通供应量
-    // 如果有 marketCap 和 price，可以计算流通供应量
-    const currentPrice = parseFloat(bestPair.priceUsd) || 0;
-    const marketCap = parseFloat(bestPair.marketCap) || 0;
-    const fdv = parseFloat(bestPair.fdv) || 0;
-
-    let circulatingSupply = 0;
-    let totalSupply = 0;
-
-    if (currentPrice > 0) {
-      if (marketCap > 0) {
-        circulatingSupply = marketCap / currentPrice;
-      }
-      if (fdv > 0) {
-        totalSupply = fdv / currentPrice;
-      }
-    }
-
-    console.log('🔍 供应量计算:', {
-      currentPrice,
-      marketCap,
-      fdv,
-      circulatingSupply,
-      totalSupply
-    });
-
-    const cryptoData: CryptoCurrency = {
-      id: `dex-${bestPair.chainId}-${tokenAddress.toLowerCase()}`,
-      symbol: tokenInfo.symbol?.toUpperCase() || 'UNKNOWN',
-      name: tokenInfo.name || tokenInfo.symbol || 'Unknown Token',
-      image: tokenImage,
-      current_price: currentPrice,
-      price_change_percentage_24h: parseFloat(bestPair.priceChange?.h24) || 0,
-      price_change_percentage_7d: parseFloat(bestPair.priceChange?.h6) || 0,
-      market_cap: marketCap,
-      market_cap_rank: 0,
-      total_volume: parseFloat(bestPair.volume?.h24) || 0,
-      high_24h: 0,
-      low_24h: 0,
-      circulating_supply: circulatingSupply,
-      total_supply: totalSupply,
-      last_updated: new Date().toISOString(),
-      // 添加 DexScreener 特有的数据
-      dexscreener_data: {
-        chainId: bestPair.chainId,
-        pairAddress: bestPair.pairAddress,
-        dexId: bestPair.dexId,
-        fdv: fdv,
-        liquidity: parseFloat(bestPair.liquidity?.usd) || 0,
-        info: {
-          imageUrl: '',
-          websites: bestPair.info?.websites || [],
-          socials: bestPair.info?.socials || []
-        }
-      }
-    };
-
-    console.log(`✅ DexScreener 获取成功 (${networkName}):`, cryptoData);
+    console.log(`✅ DexScreener 获取成功:`, cryptoData);
     return cryptoData;
 
   } catch (error) {
