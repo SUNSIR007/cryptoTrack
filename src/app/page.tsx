@@ -191,7 +191,7 @@ export default function Home() {
         </div>
 
         {/* 投资理念文字 */}
-        {!isLoading && cryptos.length > 0 && (
+        {cryptos.length > 0 && (
           <div className="mt-12 text-center">
             <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-800 dark:via-slate-900 dark:to-gray-900 p-8 rounded-2xl border border-blue-200 dark:border-slate-700 relative overflow-hidden">
               {/* 星星效果 - 仅在深色模式显示 */}
